@@ -17,12 +17,12 @@
 /**
  * Scheduled task to process pending plagiarism submissions and poll for results.
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace plagiarism_originality\task;
+namespace plagiarism_uniwise\task;
 
 /**
  * Scheduled task to poll the external service for submission results.
@@ -34,7 +34,7 @@ class submit_files extends \core\task\scheduled_task {
      * @return string
      */
     public function get_name(): string {
-        return get_string('submittask', 'plagiarism_originality');
+        return get_string('submittask', 'plagiarism_uniwise');
     }
 
     /**
@@ -43,15 +43,15 @@ class submit_files extends \core\task\scheduled_task {
     public function execute(): void {
         global $DB, $CFG;
 
-        $config = get_config('plagiarism_originality');
+        $config = get_config('plagiarism_uniwise');
         if (empty($config->originality_use)) {
             return;
         }
 
-        require_once($CFG->dirroot . '/plagiarism/originality/lib.php');
+        require_once($CFG->dirroot . '/plagiarism/uniwise/lib.php');
 
         try {
-            $client = \plagiarism_originality\api_client::create();
+            $client = \plagiarism_uniwise\api_client::create();
         } catch (\Exception $e) {
             mtrace('Originality: Cannot create API client - ' . $e->getMessage());
             return;
@@ -74,7 +74,7 @@ class submit_files extends \core\task\scheduled_task {
         $cutoff = time() - 300; // At least 5 minutes old.
 
         $records = $DB->get_records_select(
-            'plagiarism_originality_files',
+            'plagiarism_uniwise_files',
             "status = :status AND timemodified < :cutoff",
             ['status' => 0, 'cutoff' => $cutoff],
             'timemodified ASC',
@@ -91,7 +91,7 @@ class submit_files extends \core\task\scheduled_task {
         $queued = $DB->get_records_select(
             'task_adhoc',
             "classname = :classname",
-            ['classname' => '\\plagiarism_originality\\task\\submit_to_originality'],
+            ['classname' => '\\plagiarism_uniwise\\task\\submit_to_originality'],
             '',
             'id, customdata'
         );
@@ -124,11 +124,11 @@ class submit_files extends \core\task\scheduled_task {
      * Poll the external service for results on submitted files.
      *
      * @param \moodle_database $DB
-     * @param \plagiarism_originality\api_client $client
+     * @param \plagiarism_uniwise\api_client $client
      */
-    private function poll_submitted_results(\moodle_database $DB, \plagiarism_originality\api_client $client): void {
+    private function poll_submitted_results(\moodle_database $DB, \plagiarism_uniwise\api_client $client): void {
         $records = $DB->get_records_select(
-            'plagiarism_originality_files',
+            'plagiarism_uniwise_files',
             "status = :status AND externalid IS NOT NULL AND externalid != ''",
             ['status' => 1],
             'timemodified ASC',
@@ -151,14 +151,14 @@ class submit_files extends \core\task\scheduled_task {
                     $record->reporturl = $result['result']['viewerLink'] ?? '';
                     $record->errorresponse = null;
                     $record->timemodified = time();
-                    $DB->update_record('plagiarism_originality_files', $record);
+                    $DB->update_record('plagiarism_uniwise_files', $record);
 
                     mtrace("Originality: Result received for {$record->id}, score: {$record->score}%.");
                 } else if ($externalstatus === 'failed') {
                     $record->status = 3; // Error.
-                    $record->errorresponse = $result['detail'] ?? 'External processing failed';
+                    $record->errorresponse = $result['detail'] ?? get_string('externalprocessingfailed', 'plagiarism_uniwise');
                     $record->timemodified = time();
-                    $DB->update_record('plagiarism_originality_files', $record);
+                    $DB->update_record('plagiarism_uniwise_files', $record);
 
                     mtrace("Originality: External error for {$record->id}: {$record->errorresponse}");
                 }

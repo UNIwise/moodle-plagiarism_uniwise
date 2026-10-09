@@ -15,33 +15,33 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Unit tests for the plagiarism_originality API client.
+ * Unit tests for the plagiarism_uniwise API client.
  *
  * Tests for logic that does not require a live API connection:
  * URL normalization, token caching, factory validation, and error extraction.
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace plagiarism_originality;
+namespace plagiarism_uniwise;
 
 defined('MOODLE_INTERNAL') || die();
 
 /**
  * Tests for the api_client class.
  *
- * @covers \plagiarism_originality\api_client
+ * @covers \plagiarism_uniwise\api_client
  */
-#[\PHPUnit\Framework\Attributes\CoversClass(\plagiarism_originality\api_client::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\plagiarism_uniwise\api_client::class)]
 final class api_client_test extends \advanced_testcase {
     // Constructor / URL normalization.
 
     /**
      * Test that the constructor strips a trailing slash from the API URL.
      *
-     * @covers \plagiarism_originality\api_client::__construct
+     * @covers \plagiarism_uniwise\api_client::__construct
      */
     public function test_constructor_strips_trailing_slash(): void {
         $client = new api_client('https://api.example.com/', 'id', 'secret');
@@ -58,7 +58,7 @@ final class api_client_test extends \advanced_testcase {
     /**
      * Test that the constructor handles a URL without a trailing slash.
      *
-     * @covers \plagiarism_originality\api_client::__construct
+     * @covers \plagiarism_uniwise\api_client::__construct
      */
     public function test_constructor_handles_url_without_trailing_slash(): void {
         $client = new api_client('https://api.example.com', 'id', 'secret');
@@ -72,7 +72,7 @@ final class api_client_test extends \advanced_testcase {
     /**
      * Test that the constructor strips multiple trailing slashes from the API URL.
      *
-     * @covers \plagiarism_originality\api_client::__construct
+     * @covers \plagiarism_uniwise\api_client::__construct
      */
     public function test_constructor_strips_multiple_trailing_slashes(): void {
         $client = new api_client('https://api.example.com///', 'id', 'secret');
@@ -88,14 +88,14 @@ final class api_client_test extends \advanced_testcase {
     /**
      * Test that create() throws when the API URL is missing.
      *
-     * @covers \plagiarism_originality\api_client::create
+     * @covers \plagiarism_uniwise\api_client::create
      */
     public function test_create_throws_when_api_url_missing(): void {
         $this->resetAfterTest();
 
-        set_config('originality_api_url', '', 'plagiarism_originality');
-        set_config('originality_client_id', 'testid', 'plagiarism_originality');
-        set_config('originality_client_secret', 'testsecret', 'plagiarism_originality');
+        set_config('originality_api_url', '', 'plagiarism_uniwise');
+        set_config('originality_client_id', 'testid', 'plagiarism_uniwise');
+        set_config('originality_client_secret', 'testsecret', 'plagiarism_uniwise');
 
         $this->expectException(\moodle_exception::class);
         api_client::create();
@@ -104,14 +104,14 @@ final class api_client_test extends \advanced_testcase {
     /**
      * Test that create() throws when the client ID is missing.
      *
-     * @covers \plagiarism_originality\api_client::create
+     * @covers \plagiarism_uniwise\api_client::create
      */
     public function test_create_throws_when_client_id_missing(): void {
         $this->resetAfterTest();
 
-        set_config('originality_api_url', 'https://api.example.com', 'plagiarism_originality');
-        set_config('originality_client_id', '', 'plagiarism_originality');
-        set_config('originality_client_secret', 'testsecret', 'plagiarism_originality');
+        set_config('originality_api_url', 'https://api.example.com', 'plagiarism_uniwise');
+        set_config('originality_client_id', '', 'plagiarism_uniwise');
+        set_config('originality_client_secret', 'testsecret', 'plagiarism_uniwise');
 
         $this->expectException(\moodle_exception::class);
         api_client::create();
@@ -120,14 +120,14 @@ final class api_client_test extends \advanced_testcase {
     /**
      * Test that create() throws when the client secret is missing.
      *
-     * @covers \plagiarism_originality\api_client::create
+     * @covers \plagiarism_uniwise\api_client::create
      */
     public function test_create_throws_when_client_secret_missing(): void {
         $this->resetAfterTest();
 
-        set_config('originality_api_url', 'https://api.example.com', 'plagiarism_originality');
-        set_config('originality_client_id', 'testid', 'plagiarism_originality');
-        set_config('originality_client_secret', '', 'plagiarism_originality');
+        set_config('originality_api_url', 'https://api.example.com', 'plagiarism_uniwise');
+        set_config('originality_client_id', 'testid', 'plagiarism_uniwise');
+        set_config('originality_client_secret', '', 'plagiarism_uniwise');
 
         $this->expectException(\moodle_exception::class);
         api_client::create();
@@ -136,14 +136,14 @@ final class api_client_test extends \advanced_testcase {
     /**
      * Test that create() succeeds when all config values are present.
      *
-     * @covers \plagiarism_originality\api_client::create
+     * @covers \plagiarism_uniwise\api_client::create
      */
     public function test_create_succeeds_with_all_config(): void {
         $this->resetAfterTest();
 
-        set_config('originality_api_url', 'https://api.example.com', 'plagiarism_originality');
-        set_config('originality_client_id', 'testid', 'plagiarism_originality');
-        set_config('originality_client_secret', 'testsecret', 'plagiarism_originality');
+        set_config('originality_api_url', 'https://api.example.com', 'plagiarism_uniwise');
+        set_config('originality_client_id', 'testid', 'plagiarism_uniwise');
+        set_config('originality_client_secret', 'testsecret', 'plagiarism_uniwise');
 
         $client = api_client::create();
         $this->assertInstanceOf(api_client::class, $client);
@@ -154,7 +154,7 @@ final class api_client_test extends \advanced_testcase {
     /**
      * Test that get_access_token returns the cached in-memory token.
      *
-     * @covers \plagiarism_originality\api_client::get_access_token
+     * @covers \plagiarism_uniwise\api_client::get_access_token
      */
     public function test_get_access_token_returns_cached_inmemory_token(): void {
         $this->resetAfterTest();
@@ -177,16 +177,17 @@ final class api_client_test extends \advanced_testcase {
     }
 
     /**
-     * Test that get_access_token returns a persistent cached token.
+     * Test that get_access_token returns a token from the application cache.
      *
-     * @covers \plagiarism_originality\api_client::get_access_token
+     * @covers \plagiarism_uniwise\api_client::get_access_token
      */
     public function test_get_access_token_returns_persistent_cached_token(): void {
         $this->resetAfterTest();
 
-        // Simulate a previously cached token in plugin config.
-        set_config('cached_access_token', 'persistent_token', 'plagiarism_originality');
-        set_config('cached_token_expiry', time() + 3600, 'plagiarism_originality');
+        \cache::make('plagiarism_uniwise', 'accesstoken')->set(
+            sha1('https://api.example.com|id'),
+            ['token' => 'persistent_token', 'expiry' => time() + 3600]
+        );
 
         $client = new api_client('https://api.example.com', 'id', 'secret');
 
@@ -195,16 +196,36 @@ final class api_client_test extends \advanced_testcase {
     }
 
     /**
-     * Test that get_access_token ignores an expired persistent cached token.
+     * Test that a cached token for a different client ID is not reused.
      *
-     * @covers \plagiarism_originality\api_client::get_access_token
+     * @covers \plagiarism_uniwise\api_client::get_access_token
+     */
+    public function test_get_access_token_ignores_token_for_other_client(): void {
+        $this->resetAfterTest();
+
+        \cache::make('plagiarism_uniwise', 'accesstoken')->set(
+            sha1('https://nonexistent.invalid|other'),
+            ['token' => 'other_token', 'expiry' => time() + 3600]
+        );
+
+        $client = new api_client('https://nonexistent.invalid', 'id', 'secret');
+
+        $this->expectException(\moodle_exception::class);
+        $client->get_access_token();
+    }
+
+    /**
+     * Test that get_access_token ignores an expired cached token.
+     *
+     * @covers \plagiarism_uniwise\api_client::get_access_token
      */
     public function test_get_access_token_ignores_expired_persistent_cache(): void {
         $this->resetAfterTest();
 
-        // Set an expired token in persistent cache.
-        set_config('cached_access_token', 'expired_token', 'plagiarism_originality');
-        set_config('cached_token_expiry', time() - 100, 'plagiarism_originality');
+        \cache::make('plagiarism_uniwise', 'accesstoken')->set(
+            sha1('https://nonexistent.invalid|id'),
+            ['token' => 'expired_token', 'expiry' => time() - 100]
+        );
 
         $client = new api_client('https://nonexistent.invalid', 'id', 'secret');
 
@@ -218,7 +239,7 @@ final class api_client_test extends \advanced_testcase {
     /**
      * Test extract_api_error with title and detail fields.
      *
-     * @covers \plagiarism_originality\api_client::extract_api_error
+     * @covers \plagiarism_uniwise\api_client::extract_api_error
      */
     public function test_extract_api_error_with_title_and_detail(): void {
         $client = new api_client('https://api.example.com', 'id', 'secret');
@@ -234,7 +255,7 @@ final class api_client_test extends \advanced_testcase {
     /**
      * Test extract_api_error with an errorDetails array.
      *
-     * @covers \plagiarism_originality\api_client::extract_api_error
+     * @covers \plagiarism_uniwise\api_client::extract_api_error
      */
     public function test_extract_api_error_with_error_details_array(): void {
         $client = new api_client('https://api.example.com', 'id', 'secret');
@@ -257,7 +278,7 @@ final class api_client_test extends \advanced_testcase {
     /**
      * Test extract_api_error falls back to raw response when data is null.
      *
-     * @covers \plagiarism_originality\api_client::extract_api_error
+     * @covers \plagiarism_uniwise\api_client::extract_api_error
      */
     public function test_extract_api_error_falls_back_to_raw_response(): void {
         $client = new api_client('https://api.example.com', 'id', 'secret');
@@ -271,7 +292,7 @@ final class api_client_test extends \advanced_testcase {
     /**
      * Test extract_api_error returns raw response when data is empty.
      *
-     * @covers \plagiarism_originality\api_client::extract_api_error
+     * @covers \plagiarism_uniwise\api_client::extract_api_error
      */
     public function test_extract_api_error_empty_data_returns_raw(): void {
         $client = new api_client('https://api.example.com', 'id', 'secret');

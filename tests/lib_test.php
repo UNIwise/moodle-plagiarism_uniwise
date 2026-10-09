@@ -15,28 +15,28 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Unit tests for the plagiarism_originality main lib.
+ * Unit tests for the plagiarism_uniwise main lib.
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace plagiarism_originality;
+namespace plagiarism_uniwise;
 
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
-require_once($CFG->dirroot . '/plagiarism/originality/lib.php');
+require_once($CFG->dirroot . '/plagiarism/uniwise/lib.php');
 
 /**
- * Tests for the plagiarism_plugin_originality class and helper functions.
+ * Tests for the plagiarism_plugin_uniwise class and helper functions.
  *
- * @covers \plagiarism_plugin_originality
- * @covers ::plagiarism_originality_submit_text
- * @covers ::plagiarism_originality_submit_file
+ * @covers \plagiarism_plugin_uniwise
+ * @covers ::plagiarism_uniwise_submit_text
+ * @covers ::plagiarism_uniwise_submit_file
  */
-#[\PHPUnit\Framework\Attributes\CoversClass(\plagiarism_plugin_originality::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\plagiarism_plugin_uniwise::class)]
 final class lib_test extends \advanced_testcase {
     /**
      * Helper: set or update the per-activity originality settings.
@@ -56,7 +56,7 @@ final class lib_test extends \advanced_testcase {
         $data->originality_student_report = $studentreport;
         $data->originality_submit_on = $submiton;
 
-        $plugin = new \plagiarism_plugin_originality();
+        $plugin = new \plagiarism_plugin_uniwise();
         $plugin->save_form_elements($data);
     }
 
@@ -65,73 +65,73 @@ final class lib_test extends \advanced_testcase {
     /**
      * Test is_module_supported returns true for an enabled module.
      *
-     * @covers \plagiarism_plugin_originality::is_module_supported
+     * @covers \plagiarism_plugin_uniwise::is_module_supported
      */
     public function test_is_module_supported_returns_true_for_enabled_module(): void {
         $this->resetAfterTest();
 
-        set_config('originality_mod_assign', 1, 'plagiarism_originality');
+        set_config('originality_mod_assign', 1, 'plagiarism_uniwise');
 
-        $this->assertTrue(\plagiarism_plugin_originality::is_module_supported('assign'));
+        $this->assertTrue(\plagiarism_plugin_uniwise::is_module_supported('assign'));
     }
 
     /**
      * Test is_module_supported strips the mod_ prefix.
      *
-     * @covers \plagiarism_plugin_originality::is_module_supported
+     * @covers \plagiarism_plugin_uniwise::is_module_supported
      */
     public function test_is_module_supported_strips_mod_prefix(): void {
         $this->resetAfterTest();
 
-        set_config('originality_mod_forum', 1, 'plagiarism_originality');
+        set_config('originality_mod_forum', 1, 'plagiarism_uniwise');
 
-        $this->assertTrue(\plagiarism_plugin_originality::is_module_supported('mod_forum'));
+        $this->assertTrue(\plagiarism_plugin_uniwise::is_module_supported('mod_forum'));
     }
 
     /**
      * Test is_module_supported returns false for a disabled module.
      *
-     * @covers \plagiarism_plugin_originality::is_module_supported
+     * @covers \plagiarism_plugin_uniwise::is_module_supported
      */
     public function test_is_module_supported_returns_false_for_disabled_module(): void {
         $this->resetAfterTest();
 
-        set_config('originality_mod_assign', 0, 'plagiarism_originality');
+        set_config('originality_mod_assign', 0, 'plagiarism_uniwise');
 
-        $this->assertFalse(\plagiarism_plugin_originality::is_module_supported('assign'));
+        $this->assertFalse(\plagiarism_plugin_uniwise::is_module_supported('assign'));
     }
 
     /**
      * Test is_module_supported returns false for an unknown module.
      *
-     * @covers \plagiarism_plugin_originality::is_module_supported
+     * @covers \plagiarism_plugin_uniwise::is_module_supported
      */
     public function test_is_module_supported_returns_false_for_unknown_module(): void {
         $this->resetAfterTest();
 
-        $this->assertFalse(\plagiarism_plugin_originality::is_module_supported('chat'));
-        $this->assertFalse(\plagiarism_plugin_originality::is_module_supported('mod_chat'));
+        $this->assertFalse(\plagiarism_plugin_uniwise::is_module_supported('chat'));
+        $this->assertFalse(\plagiarism_plugin_uniwise::is_module_supported('mod_chat'));
     }
 
     /**
      * Test is_module_supported uses explicitly passed settings.
      *
-     * @covers \plagiarism_plugin_originality::is_module_supported
+     * @covers \plagiarism_plugin_uniwise::is_module_supported
      */
     public function test_is_module_supported_uses_passed_settings(): void {
         $this->resetAfterTest();
 
         $settings = ['originality_mod_workshop' => 1];
-        $this->assertTrue(\plagiarism_plugin_originality::is_module_supported('workshop', $settings));
+        $this->assertTrue(\plagiarism_plugin_uniwise::is_module_supported('workshop', $settings));
 
         $settings = ['originality_mod_workshop' => 0];
-        $this->assertFalse(\plagiarism_plugin_originality::is_module_supported('workshop', $settings));
+        $this->assertFalse(\plagiarism_plugin_uniwise::is_module_supported('workshop', $settings));
     }
 
     /**
      * Test is_module_supported for all supported modules.
      *
-     * @covers \plagiarism_plugin_originality::is_module_supported
+     * @covers \plagiarism_plugin_uniwise::is_module_supported
      */
     public function test_is_module_supported_all_supported_modules(): void {
         $this->resetAfterTest();
@@ -143,9 +143,9 @@ final class lib_test extends \advanced_testcase {
             'originality_mod_quiz' => 1,
         ];
 
-        foreach (\plagiarism_plugin_originality::SUPPORTED_MODULES as $mod) {
+        foreach (\plagiarism_plugin_uniwise::SUPPORTED_MODULES as $mod) {
             $this->assertTrue(
-                \plagiarism_plugin_originality::is_module_supported($mod, $settings),
+                \plagiarism_plugin_uniwise::is_module_supported($mod, $settings),
                 "Module '$mod' should be supported."
             );
         }
@@ -156,7 +156,7 @@ final class lib_test extends \advanced_testcase {
     /**
      * Test save_form_elements inserts a new record.
      *
-     * @covers \plagiarism_plugin_originality::save_form_elements
+     * @covers \plagiarism_plugin_uniwise::save_form_elements
      */
     public function test_save_form_elements_inserts_new_record(): void {
         global $DB;
@@ -167,7 +167,7 @@ final class lib_test extends \advanced_testcase {
 
         $this->set_activity_settings($assign->cmid, 1, 1, 0);
 
-        $record = $DB->get_record('plagiarism_originality_settings', ['cm' => $assign->cmid]);
+        $record = $DB->get_record('plagiarism_uniwise_settings', ['cm' => $assign->cmid]);
         $this->assertNotEmpty($record);
         $this->assertEquals(1, (int) $record->enabled);
         $this->assertEquals(1, (int) $record->student_report);
@@ -177,7 +177,7 @@ final class lib_test extends \advanced_testcase {
     /**
      * Test save_form_elements updates an existing record.
      *
-     * @covers \plagiarism_plugin_originality::save_form_elements
+     * @covers \plagiarism_plugin_uniwise::save_form_elements
      */
     public function test_save_form_elements_updates_existing_record(): void {
         global $DB;
@@ -192,7 +192,7 @@ final class lib_test extends \advanced_testcase {
         // Second save: enabled with all options.
         $this->set_activity_settings($assign->cmid, 1, 1, 1);
 
-        $record = $DB->get_record('plagiarism_originality_settings', ['cm' => $assign->cmid]);
+        $record = $DB->get_record('plagiarism_uniwise_settings', ['cm' => $assign->cmid]);
         $this->assertEquals(1, (int) $record->enabled);
         $this->assertEquals(1, (int) $record->student_report);
         $this->assertEquals(1, (int) $record->submit_on);
@@ -201,7 +201,7 @@ final class lib_test extends \advanced_testcase {
     /**
      * Test save_form_elements defaults unchecked checkboxes to 0.
      *
-     * @covers \plagiarism_plugin_originality::save_form_elements
+     * @covers \plagiarism_plugin_uniwise::save_form_elements
      */
     public function test_save_form_elements_defaults_unchecked_checkboxes(): void {
         global $DB;
@@ -214,10 +214,10 @@ final class lib_test extends \advanced_testcase {
         $data = new \stdClass();
         $data->coursemodule = $assign->cmid;
 
-        $plugin = new \plagiarism_plugin_originality();
+        $plugin = new \plagiarism_plugin_uniwise();
         $plugin->save_form_elements($data);
 
-        $record = $DB->get_record('plagiarism_originality_settings', ['cm' => $assign->cmid]);
+        $record = $DB->get_record('plagiarism_uniwise_settings', ['cm' => $assign->cmid]);
         $this->assertNotEmpty($record);
         $this->assertEquals(0, (int) $record->enabled);
         $this->assertEquals(0, (int) $record->student_report);
@@ -227,21 +227,21 @@ final class lib_test extends \advanced_testcase {
     /**
      * Test save_form_elements does nothing when no coursemodule is set.
      *
-     * @covers \plagiarism_plugin_originality::save_form_elements
+     * @covers \plagiarism_plugin_uniwise::save_form_elements
      */
     public function test_save_form_elements_no_coursemodule_does_nothing(): void {
         global $DB;
         $this->resetAfterTest();
 
-        $countbefore = $DB->count_records('plagiarism_originality_settings');
+        $countbefore = $DB->count_records('plagiarism_uniwise_settings');
 
         $data = new \stdClass();
         $data->originality_enabled = 1;
 
-        $plugin = new \plagiarism_plugin_originality();
+        $plugin = new \plagiarism_plugin_uniwise();
         $plugin->save_form_elements($data);
 
-        $countafter = $DB->count_records('plagiarism_originality_settings');
+        $countafter = $DB->count_records('plagiarism_uniwise_settings');
         $this->assertEquals($countbefore, $countafter);
     }
 
@@ -250,7 +250,7 @@ final class lib_test extends \advanced_testcase {
     /**
      * Test can_user_view_report allows teachers.
      *
-     * @covers \plagiarism_plugin_originality::can_user_view_report
+     * @covers \plagiarism_plugin_uniwise::can_user_view_report
      */
     public function test_can_user_view_report_teacher_always_allowed(): void {
         $this->resetAfterTest();
@@ -263,14 +263,14 @@ final class lib_test extends \advanced_testcase {
         $this->setUser($teacher);
 
         $this->assertTrue(
-            \plagiarism_plugin_originality::can_user_view_report($assign->cmid, $student->id)
+            \plagiarism_plugin_uniwise::can_user_view_report($assign->cmid, $student->id)
         );
     }
 
     /**
      * Test can_user_view_report denies students by default.
      *
-     * @covers \plagiarism_plugin_originality::can_user_view_report
+     * @covers \plagiarism_plugin_uniwise::can_user_view_report
      */
     public function test_can_user_view_report_student_denied_by_default(): void {
         $this->resetAfterTest();
@@ -282,14 +282,14 @@ final class lib_test extends \advanced_testcase {
         $this->setUser($student);
 
         $this->assertFalse(
-            \plagiarism_plugin_originality::can_user_view_report($assign->cmid, $student->id)
+            \plagiarism_plugin_uniwise::can_user_view_report($assign->cmid, $student->id)
         );
     }
 
     /**
      * Test can_user_view_report allows students with both settings enabled.
      *
-     * @covers \plagiarism_plugin_originality::can_user_view_report
+     * @covers \plagiarism_plugin_uniwise::can_user_view_report
      */
     public function test_can_user_view_report_student_allowed_with_both_settings(): void {
         $this->resetAfterTest();
@@ -298,20 +298,20 @@ final class lib_test extends \advanced_testcase {
         $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
         $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
 
-        set_config('originality_student_report', 1, 'plagiarism_originality');
+        set_config('originality_student_report', 1, 'plagiarism_uniwise');
         $this->set_activity_settings($assign->cmid, 1, 1, 0);
 
         $this->setUser($student);
 
         $this->assertTrue(
-            \plagiarism_plugin_originality::can_user_view_report($assign->cmid, $student->id)
+            \plagiarism_plugin_uniwise::can_user_view_report($assign->cmid, $student->id)
         );
     }
 
     /**
      * Test can_user_view_report denies students without the global setting.
      *
-     * @covers \plagiarism_plugin_originality::can_user_view_report
+     * @covers \plagiarism_plugin_uniwise::can_user_view_report
      */
     public function test_can_user_view_report_student_denied_without_global_setting(): void {
         $this->resetAfterTest();
@@ -320,20 +320,20 @@ final class lib_test extends \advanced_testcase {
         $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
         $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
 
-        set_config('originality_student_report', 0, 'plagiarism_originality');
+        set_config('originality_student_report', 0, 'plagiarism_uniwise');
         $this->set_activity_settings($assign->cmid, 1, 1, 0);
 
         $this->setUser($student);
 
         $this->assertFalse(
-            \plagiarism_plugin_originality::can_user_view_report($assign->cmid, $student->id)
+            \plagiarism_plugin_uniwise::can_user_view_report($assign->cmid, $student->id)
         );
     }
 
     /**
      * Test can_user_view_report denies students without the activity setting.
      *
-     * @covers \plagiarism_plugin_originality::can_user_view_report
+     * @covers \plagiarism_plugin_uniwise::can_user_view_report
      */
     public function test_can_user_view_report_student_denied_without_activity_setting(): void {
         $this->resetAfterTest();
@@ -342,20 +342,20 @@ final class lib_test extends \advanced_testcase {
         $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
         $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
 
-        set_config('originality_student_report', 1, 'plagiarism_originality');
+        set_config('originality_student_report', 1, 'plagiarism_uniwise');
         $this->set_activity_settings($assign->cmid, 1, 0, 0);
 
         $this->setUser($student);
 
         $this->assertFalse(
-            \plagiarism_plugin_originality::can_user_view_report($assign->cmid, $student->id)
+            \plagiarism_plugin_uniwise::can_user_view_report($assign->cmid, $student->id)
         );
     }
 
     /**
      * Test can_user_view_report denies another student.
      *
-     * @covers \plagiarism_plugin_originality::can_user_view_report
+     * @covers \plagiarism_plugin_uniwise::can_user_view_report
      */
     public function test_can_user_view_report_other_student_denied(): void {
         $this->resetAfterTest();
@@ -365,13 +365,13 @@ final class lib_test extends \advanced_testcase {
         $student2 = $this->getDataGenerator()->create_and_enrol($course, 'student');
         $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
 
-        set_config('originality_student_report', 1, 'plagiarism_originality');
+        set_config('originality_student_report', 1, 'plagiarism_uniwise');
         $this->set_activity_settings($assign->cmid, 1, 1, 0);
 
         $this->setUser($student2);
 
         $this->assertFalse(
-            \plagiarism_plugin_originality::can_user_view_report($assign->cmid, $student1->id)
+            \plagiarism_plugin_uniwise::can_user_view_report($assign->cmid, $student1->id)
         );
     }
 
@@ -380,7 +380,7 @@ final class lib_test extends \advanced_testcase {
     /**
      * Test get_module_name returns the correct name.
      *
-     * @covers \plagiarism_plugin_originality::get_module_name
+     * @covers \plagiarism_plugin_uniwise::get_module_name
      */
     public function test_get_module_name_returns_correct_name(): void {
         $this->resetAfterTest();
@@ -388,19 +388,19 @@ final class lib_test extends \advanced_testcase {
         $course = $this->getDataGenerator()->create_course();
         $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
 
-        $name = \plagiarism_plugin_originality::get_module_name($assign->cmid);
+        $name = \plagiarism_plugin_uniwise::get_module_name($assign->cmid);
         $this->assertEquals('assign', $name);
     }
 
     /**
      * Test get_module_name returns empty for an invalid cmid.
      *
-     * @covers \plagiarism_plugin_originality::get_module_name
+     * @covers \plagiarism_plugin_uniwise::get_module_name
      */
     public function test_get_module_name_returns_empty_for_invalid_cmid(): void {
         $this->resetAfterTest();
 
-        $name = \plagiarism_plugin_originality::get_module_name(999999);
+        $name = \plagiarism_plugin_uniwise::get_module_name(999999);
         $this->assertEquals('', $name);
     }
 
@@ -409,7 +409,7 @@ final class lib_test extends \advanced_testcase {
     /**
      * Test get_links returns empty when the plugin is disabled.
      *
-     * @covers \plagiarism_plugin_originality::get_links
+     * @covers \plagiarism_plugin_uniwise::get_links
      */
     public function test_get_links_returns_empty_when_plugin_disabled(): void {
         $this->resetAfterTest();
@@ -418,7 +418,7 @@ final class lib_test extends \advanced_testcase {
         $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
         $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
 
-        $plugin = new \plagiarism_plugin_originality();
+        $plugin = new \plagiarism_plugin_uniwise();
         $output = $plugin->get_links([
             'cmid' => $assign->cmid,
             'userid' => $student->id,
@@ -432,7 +432,7 @@ final class lib_test extends \advanced_testcase {
     /**
      * Test get_links returns empty when there is no identifier.
      *
-     * @covers \plagiarism_plugin_originality::get_links
+     * @covers \plagiarism_plugin_uniwise::get_links
      */
     public function test_get_links_returns_empty_when_no_identifier(): void {
         $this->resetAfterTest();
@@ -443,7 +443,7 @@ final class lib_test extends \advanced_testcase {
 
         $this->set_activity_settings($assign->cmid, 1, 0, 0);
 
-        $plugin = new \plagiarism_plugin_originality();
+        $plugin = new \plagiarism_plugin_uniwise();
         $output = $plugin->get_links([
             'cmid' => $assign->cmid,
             'userid' => $student->id,
@@ -455,7 +455,7 @@ final class lib_test extends \advanced_testcase {
     /**
      * Test get_links returns empty when there is no file record.
      *
-     * @covers \plagiarism_plugin_originality::get_links
+     * @covers \plagiarism_plugin_uniwise::get_links
      */
     public function test_get_links_returns_empty_when_no_file_record(): void {
         $this->resetAfterTest();
@@ -466,7 +466,7 @@ final class lib_test extends \advanced_testcase {
 
         $this->set_activity_settings($assign->cmid, 1, 0, 0);
 
-        $plugin = new \plagiarism_plugin_originality();
+        $plugin = new \plagiarism_plugin_uniwise();
         $output = $plugin->get_links([
             'cmid' => $assign->cmid,
             'userid' => $student->id,
@@ -479,7 +479,7 @@ final class lib_test extends \advanced_testcase {
     /**
      * Test get_links shows status from a local record.
      *
-     * @covers \plagiarism_plugin_originality::get_links
+     * @covers \plagiarism_plugin_uniwise::get_links
      */
     public function test_get_links_shows_status_from_local_record(): void {
         global $DB;
@@ -495,7 +495,7 @@ final class lib_test extends \advanced_testcase {
         $content = 'Test online text submission';
         $identifier = sha1($content);
 
-        $DB->insert_record('plagiarism_originality_files', (object) [
+        $DB->insert_record('plagiarism_uniwise_files', (object) [
             'cm' => $assign->cmid,
             'userid' => $student->id,
             'identifier' => $identifier,
@@ -510,7 +510,7 @@ final class lib_test extends \advanced_testcase {
 
         $this->setUser($teacher);
 
-        $plugin = new \plagiarism_plugin_originality();
+        $plugin = new \plagiarism_plugin_uniwise();
         $output = $plugin->get_links([
             'cmid' => $assign->cmid,
             'userid' => $student->id,
@@ -526,7 +526,7 @@ final class lib_test extends \advanced_testcase {
     /**
      * Test print_disclosure returns empty when the plugin is disabled.
      *
-     * @covers \plagiarism_plugin_originality::print_disclosure
+     * @covers \plagiarism_plugin_uniwise::print_disclosure
      */
     public function test_print_disclosure_returns_empty_when_disabled(): void {
         $this->resetAfterTest();
@@ -534,9 +534,9 @@ final class lib_test extends \advanced_testcase {
         $course = $this->getDataGenerator()->create_course();
         $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
 
-        set_config('originality_use', 0, 'plagiarism_originality');
+        set_config('originality_use', 0, 'plagiarism_uniwise');
 
-        $plugin = new \plagiarism_plugin_originality();
+        $plugin = new \plagiarism_plugin_uniwise();
         $output = $plugin->print_disclosure($assign->cmid);
 
         $this->assertEquals('', $output);
@@ -545,7 +545,7 @@ final class lib_test extends \advanced_testcase {
     /**
      * Test print_disclosure returns empty when the activity is disabled.
      *
-     * @covers \plagiarism_plugin_originality::print_disclosure
+     * @covers \plagiarism_plugin_uniwise::print_disclosure
      */
     public function test_print_disclosure_returns_empty_when_activity_disabled(): void {
         $this->resetAfterTest();
@@ -553,21 +553,21 @@ final class lib_test extends \advanced_testcase {
         $course = $this->getDataGenerator()->create_course();
         $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
 
-        set_config('originality_use', 1, 'plagiarism_originality');
+        set_config('originality_use', 1, 'plagiarism_uniwise');
         $this->set_activity_settings($assign->cmid, 0, 0, 0);
 
-        $plugin = new \plagiarism_plugin_originality();
+        $plugin = new \plagiarism_plugin_uniwise();
         $output = $plugin->print_disclosure($assign->cmid);
 
         $this->assertEquals('', $output);
     }
 
-    // Tests for plagiarism_originality_submit_text().
+    // Tests for plagiarism_uniwise_submit_text().
 
     /**
      * Test submit_text creates a record and queues a task.
      *
-     * @covers ::plagiarism_originality_submit_text
+     * @covers ::plagiarism_uniwise_submit_text
      */
     public function test_submit_text_creates_record_and_queues_task(): void {
         global $DB;
@@ -580,9 +580,9 @@ final class lib_test extends \advanced_testcase {
         $content = 'This is some online text to check for plagiarism.';
         $identifier = sha1($content);
 
-        plagiarism_originality_submit_text($content, $assign->cmid, $student->id);
+        plagiarism_uniwise_submit_text($content, $assign->cmid, $student->id);
 
-        $record = $DB->get_record('plagiarism_originality_files', [
+        $record = $DB->get_record('plagiarism_uniwise_files', [
             'cm' => $assign->cmid,
             'userid' => $student->id,
             'identifier' => $identifier,
@@ -594,7 +594,7 @@ final class lib_test extends \advanced_testcase {
         $this->assertEquals(0, (int) $record->attempts);
 
         $tasks = $DB->get_records('task_adhoc', [
-            'classname' => '\\plagiarism_originality\\task\\submit_to_originality',
+            'classname' => '\\plagiarism_uniwise\\task\\submit_to_originality',
         ]);
         $this->assertNotEmpty($tasks);
     }
@@ -602,7 +602,7 @@ final class lib_test extends \advanced_testcase {
     /**
      * Test submit_text skips a duplicate submission.
      *
-     * @covers ::plagiarism_originality_submit_text
+     * @covers ::plagiarism_uniwise_submit_text
      */
     public function test_submit_text_skips_duplicate(): void {
         global $DB;
@@ -615,7 +615,7 @@ final class lib_test extends \advanced_testcase {
         $content = 'Duplicate test content';
         $identifier = sha1($content);
 
-        $DB->insert_record('plagiarism_originality_files', (object) [
+        $DB->insert_record('plagiarism_uniwise_files', (object) [
             'cm' => $assign->cmid,
             'userid' => $student->id,
             'identifier' => $identifier,
@@ -627,9 +627,9 @@ final class lib_test extends \advanced_testcase {
             'timemodified' => time(),
         ]);
 
-        plagiarism_originality_submit_text($content, $assign->cmid, $student->id);
+        plagiarism_uniwise_submit_text($content, $assign->cmid, $student->id);
 
-        $count = $DB->count_records('plagiarism_originality_files', [
+        $count = $DB->count_records('plagiarism_uniwise_files', [
             'cm' => $assign->cmid,
             'userid' => $student->id,
             'identifier' => $identifier,
@@ -640,7 +640,7 @@ final class lib_test extends \advanced_testcase {
     /**
      * Test submit_text resubmits on error status.
      *
-     * @covers ::plagiarism_originality_submit_text
+     * @covers ::plagiarism_uniwise_submit_text
      */
     public function test_submit_text_resubmits_on_error_status(): void {
         global $DB;
@@ -653,7 +653,7 @@ final class lib_test extends \advanced_testcase {
         $content = 'Resubmit test content';
         $identifier = sha1($content);
 
-        $DB->insert_record('plagiarism_originality_files', (object) [
+        $DB->insert_record('plagiarism_uniwise_files', (object) [
             'cm' => $assign->cmid,
             'userid' => $student->id,
             'identifier' => $identifier,
@@ -665,9 +665,9 @@ final class lib_test extends \advanced_testcase {
             'timemodified' => time(),
         ]);
 
-        plagiarism_originality_submit_text($content, $assign->cmid, $student->id);
+        plagiarism_uniwise_submit_text($content, $assign->cmid, $student->id);
 
-        $record = $DB->get_record('plagiarism_originality_files', [
+        $record = $DB->get_record('plagiarism_uniwise_files', [
             'cm' => $assign->cmid,
             'userid' => $student->id,
             'identifier' => $identifier,
@@ -680,10 +680,10 @@ final class lib_test extends \advanced_testcase {
     /**
      * Test SUPPORTED_MODULES contains expected values.
      *
-     * @covers \plagiarism_plugin_originality
+     * @covers \plagiarism_plugin_uniwise
      */
     public function test_supported_modules_contains_expected_values(): void {
         $expected = ['assign', 'forum', 'workshop', 'quiz'];
-        $this->assertEquals($expected, \plagiarism_plugin_originality::SUPPORTED_MODULES);
+        $this->assertEquals($expected, \plagiarism_plugin_uniwise::SUPPORTED_MODULES);
     }
 }

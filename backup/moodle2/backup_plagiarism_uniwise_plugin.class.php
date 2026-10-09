@@ -15,10 +15,10 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Backup support for plagiarism_originality per-activity settings.
+ * Backup support for plagiarism_uniwise per-activity settings.
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -27,7 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 /**
  * Includes the per-activity Originality settings in module backups.
  */
-class backup_plagiarism_originality_plugin extends backup_plagiarism_plugin {
+class backup_plagiarism_uniwise_plugin extends backup_plagiarism_plugin {
     /**
      * Define the module plugin structure.
      *
@@ -47,7 +47,7 @@ class backup_plagiarism_originality_plugin extends backup_plagiarism_plugin {
         ]);
         $pluginwrapper->add_child($settings);
 
-        $settings->set_source_table('plagiarism_originality_settings', ['cm' => backup::VAR_PARENTID]);
+        $settings->set_source_table('plagiarism_uniwise_settings', ['cm' => backup::VAR_PARENTID]);
 
         return $plugin;
     }

@@ -15,40 +15,40 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Unit tests for the plagiarism_originality observer.
+ * Unit tests for the plagiarism_uniwise observer.
  *
  * Tests the event handler gating logic (global enable, module support,
  * per-activity settings, submit timing).
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace plagiarism_originality;
+namespace plagiarism_uniwise;
 
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
-require_once($CFG->dirroot . '/plagiarism/originality/lib.php');
+require_once($CFG->dirroot . '/plagiarism/uniwise/lib.php');
 require_once($CFG->dirroot . '/mod/assign/locallib.php');
 
 /**
  * Tests for the observer class.
  *
- * @covers \plagiarism_originality\observer
+ * @covers \plagiarism_uniwise\observer
  */
-#[\PHPUnit\Framework\Attributes\CoversClass(\plagiarism_originality\observer::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\plagiarism_uniwise\observer::class)]
 final class observer_test extends \advanced_testcase {
     /**
      * Helper: enable the plugin globally with assign module support.
      */
     private function enable_plugin(): void {
-        set_config('originality_use', 1, 'plagiarism_originality');
-        set_config('originality_mod_assign', 1, 'plagiarism_originality');
-        set_config('originality_api_url', 'https://api.example.com', 'plagiarism_originality');
-        set_config('originality_client_id', 'testid', 'plagiarism_originality');
-        set_config('originality_client_secret', 'testsecret', 'plagiarism_originality');
+        set_config('originality_use', 1, 'plagiarism_uniwise');
+        set_config('originality_mod_assign', 1, 'plagiarism_uniwise');
+        set_config('originality_api_url', 'https://api.example.com', 'plagiarism_uniwise');
+        set_config('originality_client_id', 'testid', 'plagiarism_uniwise');
+        set_config('originality_client_secret', 'testsecret', 'plagiarism_uniwise');
     }
 
     /**
@@ -61,7 +61,7 @@ final class observer_test extends \advanced_testcase {
         $data->originality_student_report = $studentreport;
         $data->originality_submit_on = $submiton;
 
-        $plugin = new \plagiarism_plugin_originality();
+        $plugin = new \plagiarism_plugin_uniwise();
         $plugin->save_form_elements($data);
     }
 
@@ -102,15 +102,15 @@ final class observer_test extends \advanced_testcase {
     /**
      * Test observer does nothing when plugin is disabled.
      *
-     * @covers \plagiarism_originality\observer::assessable_submitted
+     * @covers \plagiarism_uniwise\observer::assessable_submitted
      */
     public function test_observer_does_nothing_when_plugin_disabled(): void {
         global $DB;
         $this->resetAfterTest();
 
         // Plugin NOT enabled.
-        set_config('originality_use', 0, 'plagiarism_originality');
-        set_config('originality_mod_assign', 1, 'plagiarism_originality');
+        set_config('originality_use', 0, 'plagiarism_uniwise');
+        set_config('originality_mod_assign', 1, 'plagiarism_uniwise');
 
         $course = $this->getDataGenerator()->create_course();
         $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
@@ -125,22 +125,22 @@ final class observer_test extends \advanced_testcase {
         $this->create_online_text_submission($student, $assign, 'Test content');
 
         // No originality records should have been created.
-        $count = $DB->count_records('plagiarism_originality_files');
+        $count = $DB->count_records('plagiarism_uniwise_files');
         $this->assertEquals(0, $count);
     }
 
     /**
      * Test observer does nothing when module is unsupported.
      *
-     * @covers \plagiarism_originality\observer::assessable_submitted
+     * @covers \plagiarism_uniwise\observer::assessable_submitted
      */
     public function test_observer_does_nothing_when_module_unsupported(): void {
         global $DB;
         $this->resetAfterTest();
 
-        set_config('originality_use', 1, 'plagiarism_originality');
-        set_config('originality_mod_assign', 0, 'plagiarism_originality'); // Assign disabled.
-        set_config('originality_mod_forum', 1, 'plagiarism_originality');
+        set_config('originality_use', 1, 'plagiarism_uniwise');
+        set_config('originality_mod_assign', 0, 'plagiarism_uniwise'); // Assign disabled.
+        set_config('originality_mod_forum', 1, 'plagiarism_uniwise');
 
         $course = $this->getDataGenerator()->create_course();
         $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
@@ -154,14 +154,14 @@ final class observer_test extends \advanced_testcase {
 
         $this->create_online_text_submission($student, $assign, 'Test content');
 
-        $count = $DB->count_records('plagiarism_originality_files');
+        $count = $DB->count_records('plagiarism_uniwise_files');
         $this->assertEquals(0, $count);
     }
 
     /**
      * Test observer does nothing when activity is disabled.
      *
-     * @covers \plagiarism_originality\observer::assessable_submitted
+     * @covers \plagiarism_uniwise\observer::assessable_submitted
      */
     public function test_observer_does_nothing_when_activity_disabled(): void {
         global $DB;
@@ -182,14 +182,14 @@ final class observer_test extends \advanced_testcase {
 
         $this->create_online_text_submission($student, $assign, 'Test content');
 
-        $count = $DB->count_records('plagiarism_originality_files');
+        $count = $DB->count_records('plagiarism_uniwise_files');
         $this->assertEquals(0, $count);
     }
 
     /**
      * Test observer skips when submit on marking.
      *
-     * @covers \plagiarism_originality\observer::assessable_submitted
+     * @covers \plagiarism_uniwise\observer::assessable_submitted
      */
     public function test_observer_skips_when_submit_on_marking(): void {
         global $DB;
@@ -211,14 +211,14 @@ final class observer_test extends \advanced_testcase {
         $this->create_online_text_submission($student, $assign, 'Test content');
 
         // Should NOT create records since submit_on is set to marking.
-        $count = $DB->count_records('plagiarism_originality_files');
+        $count = $DB->count_records('plagiarism_uniwise_files');
         $this->assertEquals(0, $count);
     }
 
     /**
      * Test observer processes online text on upload.
      *
-     * @covers \plagiarism_originality\observer::assessable_submitted
+     * @covers \plagiarism_uniwise\observer::assessable_submitted
      */
     public function test_observer_processes_online_text_on_upload(): void {
         global $DB;
@@ -241,7 +241,7 @@ final class observer_test extends \advanced_testcase {
         $this->create_online_text_submission($student, $assign, $content);
 
         // A file record should be created for the online text.
-        $records = $DB->get_records('plagiarism_originality_files', [
+        $records = $DB->get_records('plagiarism_uniwise_files', [
             'cm' => $assign->cmid,
             'userid' => $student->id,
         ]);
@@ -257,7 +257,7 @@ final class observer_test extends \advanced_testcase {
     /**
      * Test submission removed queues delete tasks.
      *
-     * @covers \plagiarism_originality\observer::submission_removed
+     * @covers \plagiarism_uniwise\observer::submission_removed
      */
     public function test_submission_removed_queues_delete_tasks(): void {
         global $DB;
@@ -272,7 +272,7 @@ final class observer_test extends \advanced_testcase {
         $this->set_activity_settings($assign->cmid, 1, 0, 0);
 
         // Create file records to be "removed".
-        $DB->insert_record('plagiarism_originality_files', (object) [
+        $DB->insert_record('plagiarism_uniwise_files', (object) [
             'cm' => $assign->cmid,
             'userid' => $student->id,
             'identifier' => 'hash1',
@@ -284,7 +284,7 @@ final class observer_test extends \advanced_testcase {
             'timecreated' => time(),
             'timemodified' => time(),
         ]);
-        $DB->insert_record('plagiarism_originality_files', (object) [
+        $DB->insert_record('plagiarism_uniwise_files', (object) [
             'cm' => $assign->cmid,
             'userid' => $student->id,
             'identifier' => 'hash2',
@@ -309,7 +309,7 @@ final class observer_test extends \advanced_testcase {
 
         // Two delete tasks should be queued.
         $tasks = $DB->get_records('task_adhoc', [
-            'classname' => '\\plagiarism_originality\\task\\delete_from_originality',
+            'classname' => '\\plagiarism_uniwise\\task\\delete_from_originality',
         ]);
         $this->assertCount(2, $tasks);
     }
@@ -317,21 +317,21 @@ final class observer_test extends \advanced_testcase {
     /**
      * Test submission removed does nothing when plugin is disabled.
      *
-     * @covers \plagiarism_originality\observer::submission_removed
+     * @covers \plagiarism_uniwise\observer::submission_removed
      */
     public function test_submission_removed_does_nothing_when_plugin_disabled(): void {
         global $DB;
         $this->resetAfterTest();
 
-        set_config('originality_use', 0, 'plagiarism_originality');
-        set_config('originality_mod_assign', 1, 'plagiarism_originality');
+        set_config('originality_use', 0, 'plagiarism_uniwise');
+        set_config('originality_mod_assign', 1, 'plagiarism_uniwise');
 
         $course = $this->getDataGenerator()->create_course();
         $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
         $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
 
         // Create a file record.
-        $DB->insert_record('plagiarism_originality_files', (object) [
+        $DB->insert_record('plagiarism_uniwise_files', (object) [
             'cm' => $assign->cmid,
             'userid' => $student->id,
             'identifier' => 'hash1',
@@ -355,7 +355,7 @@ final class observer_test extends \advanced_testcase {
 
         // No delete tasks should be queued.
         $tasks = $DB->get_records('task_adhoc', [
-            'classname' => '\\plagiarism_originality\\task\\delete_from_originality',
+            'classname' => '\\plagiarism_uniwise\\task\\delete_from_originality',
         ]);
         $this->assertEmpty($tasks);
     }

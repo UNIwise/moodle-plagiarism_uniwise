@@ -15,20 +15,20 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Event observer for plagiarism_originality.
+ * Event observer for plagiarism_uniwise.
  *
  * Listens for assessable_uploaded and assessable_submitted events to
  * automatically send files to the external plagiarism service.
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace plagiarism_originality;
+namespace plagiarism_uniwise;
 
 /**
- * Observer class for plagiarism_originality events.
+ * Observer class for plagiarism_uniwise events.
  */
 class observer {
     /**
@@ -39,9 +39,9 @@ class observer {
     public static function assessable_uploaded(\core\event\assessable_uploaded $event): void {
         global $DB, $CFG;
 
-        require_once($CFG->dirroot . '/plagiarism/originality/lib.php');
+        require_once($CFG->dirroot . '/plagiarism/uniwise/lib.php');
 
-        $config = get_config('plagiarism_originality');
+        $config = get_config('plagiarism_uniwise');
         if (empty($config->originality_use)) {
             return;
         }
@@ -51,12 +51,12 @@ class observer {
         // Derive module type from context (handles submission plugin events like
         // assignsubmission_onlinetext whose component is not 'mod_assign').
         $cm = get_coursemodule_from_id('', $cmid);
-        if (!$cm || !\plagiarism_plugin_originality::is_module_supported($cm->modname)) {
+        if (!$cm || !\plagiarism_plugin_uniwise::is_module_supported($cm->modname)) {
             return;
         }
 
         // Check if originality is enabled for this activity.
-        $modsettings = $DB->get_record('plagiarism_originality_settings', ['cm' => $cmid]);
+        $modsettings = $DB->get_record('plagiarism_uniwise_settings', ['cm' => $cmid]);
         if (empty($modsettings) || empty($modsettings->enabled)) {
             return;
         }
@@ -75,7 +75,7 @@ class observer {
         // Handle online text content if present (e.g. from assignsubmission_onlinetext).
         $content = $other['content'] ?? '';
         if (!empty($content)) {
-            plagiarism_originality_submit_text($content, $cmid, $userid);
+            plagiarism_uniwise_submit_text($content, $cmid, $userid);
         }
 
         // Handle file uploads.
@@ -89,7 +89,7 @@ class observer {
         foreach ($pathnamehashes as $hash) {
             $file = $fs->get_file_by_hash($hash);
             if ($file && !$file->is_directory()) {
-                plagiarism_originality_submit_file($file, $cmid, $userid);
+                plagiarism_uniwise_submit_file($file, $cmid, $userid);
             }
         }
     }
@@ -102,9 +102,9 @@ class observer {
     public static function assessable_submitted(\core\event\assessable_submitted $event): void {
         global $DB, $CFG;
 
-        require_once($CFG->dirroot . '/plagiarism/originality/lib.php');
+        require_once($CFG->dirroot . '/plagiarism/uniwise/lib.php');
 
-        $config = get_config('plagiarism_originality');
+        $config = get_config('plagiarism_uniwise');
         if (empty($config->originality_use)) {
             return;
         }
@@ -113,11 +113,11 @@ class observer {
 
         // Derive module type from context for consistency with assessable_uploaded.
         $cm = get_coursemodule_from_id('', $cmid);
-        if (!$cm || !\plagiarism_plugin_originality::is_module_supported($cm->modname)) {
+        if (!$cm || !\plagiarism_plugin_uniwise::is_module_supported($cm->modname)) {
             return;
         }
 
-        $modsettings = $DB->get_record('plagiarism_originality_settings', ['cm' => $cmid]);
+        $modsettings = $DB->get_record('plagiarism_uniwise_settings', ['cm' => $cmid]);
         if (empty($modsettings) || empty($modsettings->enabled)) {
             return;
         }
@@ -134,7 +134,7 @@ class observer {
         // Handle online text content if present.
         $content = $other['content'] ?? '';
         if (!empty($content)) {
-            plagiarism_originality_submit_text($content, $cmid, $userid);
+            plagiarism_uniwise_submit_text($content, $cmid, $userid);
         }
 
         // Handle any associated files.
@@ -144,7 +144,7 @@ class observer {
             foreach ($pathnamehashes as $hash) {
                 $file = $fs->get_file_by_hash($hash);
                 if ($file && !$file->is_directory()) {
-                    plagiarism_originality_submit_file($file, $cmid, $userid);
+                    plagiarism_uniwise_submit_file($file, $cmid, $userid);
                 }
             }
         }
@@ -160,9 +160,9 @@ class observer {
     public static function submission_removed(\mod_assign\event\submission_removed $event): void {
         global $DB, $CFG;
 
-        require_once($CFG->dirroot . '/plagiarism/originality/lib.php');
+        require_once($CFG->dirroot . '/plagiarism/uniwise/lib.php');
 
-        $config = get_config('plagiarism_originality');
+        $config = get_config('plagiarism_uniwise');
         if (empty($config->originality_use)) {
             return;
         }
@@ -170,13 +170,13 @@ class observer {
         $cmid = $event->contextinstanceid;
 
         // Check if this activity type is enabled in global settings.
-        if (!\plagiarism_plugin_originality::is_module_supported('assign')) {
+        if (!\plagiarism_plugin_uniwise::is_module_supported('assign')) {
             return;
         }
         $userid = $event->relateduserid ?? $event->userid;
 
         // Find all tracked files for this user on this course module.
-        $records = $DB->get_records('plagiarism_originality_files', [
+        $records = $DB->get_records('plagiarism_uniwise_files', [
             'cm'     => $cmid,
             'userid' => $userid,
         ]);
@@ -187,7 +187,7 @@ class observer {
 
         foreach ($records as $record) {
             // Queue an adhoc task to delete from external service with retry.
-            $task = new \plagiarism_originality\task\delete_from_originality();
+            $task = new \plagiarism_uniwise\task\delete_from_originality();
             $task->set_custom_data([
                 'external_id' => $record->externalid ?? '',
                 'record_id'   => $record->id,
@@ -208,20 +208,20 @@ class observer {
     public static function submission_graded(\mod_assign\event\submission_graded $event): void {
         global $DB, $CFG;
 
-        require_once($CFG->dirroot . '/plagiarism/originality/lib.php');
+        require_once($CFG->dirroot . '/plagiarism/uniwise/lib.php');
 
-        $config = get_config('plagiarism_originality');
+        $config = get_config('plagiarism_uniwise');
         if (empty($config->originality_use)) {
             return;
         }
 
         $cmid = $event->contextinstanceid;
 
-        if (!\plagiarism_plugin_originality::is_module_supported('assign')) {
+        if (!\plagiarism_plugin_uniwise::is_module_supported('assign')) {
             return;
         }
 
-        $modsettings = $DB->get_record('plagiarism_originality_settings', ['cm' => $cmid]);
+        $modsettings = $DB->get_record('plagiarism_uniwise_settings', ['cm' => $cmid]);
         if (empty($modsettings) || empty($modsettings->enabled)) {
             return;
         }
@@ -243,12 +243,15 @@ class observer {
         }
 
         // Find the latest submitted submission for this user.
-        $submission = $DB->get_record_sql(
+        $submissions = $DB->get_records_sql(
             "SELECT s.* FROM {assign_submission} s
-              WHERE s.assignment = :assignid AND s.userid = :userid AND s.status = 'submitted'
-              ORDER BY s.timemodified DESC LIMIT 1",
-            ['assignid' => $cm->instance, 'userid' => $userid]
+              WHERE s.assignment = :assignid AND s.userid = :userid AND s.status = :status
+              ORDER BY s.timemodified DESC",
+            ['assignid' => $cm->instance, 'userid' => $userid, 'status' => 'submitted'],
+            0,
+            1
         );
+        $submission = reset($submissions);
 
         if (!$submission) {
             return;
@@ -268,7 +271,7 @@ class observer {
 
         foreach ($files as $file) {
             if (!$file->is_directory()) {
-                plagiarism_originality_submit_file($file, $cmid, $userid);
+                plagiarism_uniwise_submit_file($file, $cmid, $userid);
             }
         }
 
@@ -278,7 +281,7 @@ class observer {
             'submission' => $submission->id,
         ]);
         if ($onlinetext && !empty($onlinetext->onlinetext)) {
-            plagiarism_originality_submit_text($onlinetext->onlinetext, $cmid, $userid);
+            plagiarism_uniwise_submit_text($onlinetext->onlinetext, $cmid, $userid);
         }
     }
 }

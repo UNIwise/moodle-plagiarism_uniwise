@@ -24,12 +24,40 @@ jobs:
           --health-timeout 5s
           --health-retries 3
 
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MYSQL_USER: 'root'
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'true'
+          MYSQL_CHARACTER_SET_SERVER: 'utf8mb4'
+          MYSQL_COLLATION_SERVER: 'utf8mb4_unicode_ci'
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 3
+
     strategy:
       fail-fast: false
       matrix:
         include:
+          - php: '8.0'
+            moodle-branch: 'MOODLE_401_STABLE'
+            database: 'pgsql'
+          - php: '8.0'
+            moodle-branch: 'MOODLE_401_STABLE'
+            database: 'mariadb'
           - php: '8.3'
             moodle-branch: 'MOODLE_405_STABLE'
+            database: 'pgsql'
+          - php: '8.3'
+            moodle-branch: 'MOODLE_500_STABLE'
+            database: 'pgsql'
+          - php: '8.3'
+            moodle-branch: 'MOODLE_500_STABLE'
+            database: 'mariadb'
 
     steps:
       - name: Check out repository
@@ -42,7 +70,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: pgsql, zip, gd, xmlrpc, soap, intl
+          extensions: pgsql, mysqli, zip, gd, xmlrpc, soap, intl
           ini-values: max_input_vars=5000
           coverage: none
 
@@ -55,9 +83,9 @@ jobs:
           echo "NVM_DIR=$HOME/.nvm" >> $GITHUB_ENV
 
       - name: Install moodle-plugin-ci
-        run: moodle-plugin-ci install --plugin ./plugin --db-type pgsql
+        run: moodle-plugin-ci install --plugin ./plugin --db-host=127.0.0.1
         env:
-          DB: pgsql
+          DB: ${{ matrix.database }}
           MOODLE_BRANCH: ${{ matrix.moodle-branch }}
 
       - name: PHP Lint
@@ -78,7 +106,7 @@ jobs:
 
       - name: Moodle PHPDoc Checker
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci phpdoc || true
+        run: moodle-plugin-ci phpdoc --max-warnings 0
 
       - name: Validate plugin structure
         if: ${{ !cancelled() }}

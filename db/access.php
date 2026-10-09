@@ -15,10 +15,10 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Capability definitions for plagiarism_originality.
+ * Capability definitions for plagiarism_uniwise.
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -26,13 +26,13 @@ defined('MOODLE_INTERNAL') || die();
 
 $capabilities = [
     // Whether the user can manage.
-    'plagiarism/originality:manage' => [
+    'plagiarism/uniwise:manage' => [
         'captype' => 'write',
         'contextlevel' => CONTEXT_SYSTEM,
         'archetypes' => [],
     ],
     // Whether the user can view other users' plagiarism reports.
-    'plagiarism/originality:viewreport' => [
+    'plagiarism/uniwise:viewreport' => [
         'captype' => 'read',
         'contextlevel' => CONTEXT_MODULE,
         'archetypes' => [

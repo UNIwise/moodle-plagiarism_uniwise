@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Version information for plagiarism_uniwise.
+ * Cache definitions for plagiarism_uniwise.
  *
  * @package    plagiarism_uniwise
  * @copyright  2026 UNIwise
@@ -24,8 +24,11 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version = 2026100901;
-$plugin->release = '1.0.0';
-$plugin->requires = 2022112800;
-$plugin->component = 'plagiarism_uniwise';
-$plugin->maturity = MATURITY_STABLE;
+$definitions = [
+    'accesstoken' => [
+        'mode' => cache_store::MODE_APPLICATION,
+        'simplekeys' => true,
+        'simpledata' => true,
+        'staticacceleration' => true,
+    ],
+];

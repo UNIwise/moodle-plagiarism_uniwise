@@ -17,19 +17,19 @@
 /**
  * Adhoc task to delete a document from the Originality API with exponential backoff retry.
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace plagiarism_originality\task;
+namespace plagiarism_uniwise\task;
 
 /**
  * Adhoc task: delete a document from the external Originality service.
  *
  * Custom data expected:
  *   - external_id: string  (the external document ID)
- *   - record_id:   int     (plagiarism_originality_files.id, for local cleanup)
+ *   - record_id:   int     (plagiarism_uniwise_files.id, for local cleanup)
  *   - attempt:     int     (current attempt number, starts at 1)
  */
 class delete_from_originality extends \core\task\adhoc_task {
@@ -50,32 +50,32 @@ class delete_from_originality extends \core\task\adhoc_task {
         if (empty($externalid)) {
             // No external ID — just delete the local record.
             if ($recordid > 0) {
-                $DB->delete_records('plagiarism_originality_files', ['id' => $recordid]);
+                $DB->delete_records('plagiarism_uniwise_files', ['id' => $recordid]);
             }
             mtrace("Originality delete task: no external ID, local record {$recordid} cleaned up.");
             return;
         }
 
         try {
-            $client = \plagiarism_originality\api_client::create();
+            $client = \plagiarism_uniwise\api_client::create();
             $client->delete_document($externalid);
 
             // Success — delete the local record.
             if ($recordid > 0) {
-                $DB->delete_records('plagiarism_originality_files', ['id' => $recordid]);
+                $DB->delete_records('plagiarism_uniwise_files', ['id' => $recordid]);
             }
 
             mtrace("Originality delete task: document {$externalid} deleted on attempt {$attempt}.");
         } catch (\Exception $e) {
             if ($attempt >= self::MAX_ATTEMPTS) {
                 // Give up — mark the record as delete_failed so admin can retry.
-                if ($recordid > 0 && $DB->record_exists('plagiarism_originality_files', ['id' => $recordid])) {
+                if ($recordid > 0 && $DB->record_exists('plagiarism_uniwise_files', ['id' => $recordid])) {
                     $update = new \stdClass();
                     $update->id = $recordid;
                     $update->status = 4; // Delete_failed.
                     $update->errorresponse = $e->getMessage();
                     $update->timemodified = time();
-                    $DB->update_record('plagiarism_originality_files', $update);
+                    $DB->update_record('plagiarism_uniwise_files', $update);
                 }
                 mtrace("Originality delete task: document {$externalid} failed after {$attempt} attempts: "
                     . $e->getMessage() . ". Record marked as delete_failed.");

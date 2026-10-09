@@ -15,10 +15,10 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Event observers for plagiarism_originality.
+ * Event observers for plagiarism_uniwise.
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -27,18 +27,18 @@ defined('MOODLE_INTERNAL') || die();
 $observers = [
     [
         'eventname' => '\core\event\assessable_uploaded',
-        'callback'  => '\plagiarism_originality\observer::assessable_uploaded',
+        'callback'  => '\plagiarism_uniwise\observer::assessable_uploaded',
     ],
     [
         'eventname' => '\core\event\assessable_submitted',
-        'callback'  => '\plagiarism_originality\observer::assessable_submitted',
+        'callback'  => '\plagiarism_uniwise\observer::assessable_submitted',
     ],
     [
         'eventname' => '\mod_assign\event\submission_removed',
-        'callback'  => '\plagiarism_originality\observer::submission_removed',
+        'callback'  => '\plagiarism_uniwise\observer::submission_removed',
     ],
     [
         'eventname' => '\mod_assign\event\submission_graded',
-        'callback'  => '\plagiarism_originality\observer::submission_graded',
+        'callback'  => '\plagiarism_uniwise\observer::submission_graded',
     ],
 ];

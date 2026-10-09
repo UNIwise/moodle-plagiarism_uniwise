@@ -15,26 +15,26 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Backup and restore tests for plagiarism_originality.
+ * Backup and restore tests for plagiarism_uniwise.
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace plagiarism_originality;
+namespace plagiarism_uniwise;
 
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
 require_once($CFG->dirroot . '/course/lib.php');
-require_once($CFG->dirroot . '/plagiarism/originality/lib.php');
+require_once($CFG->dirroot . '/plagiarism/uniwise/lib.php');
 
 /**
  * Tests that per-activity settings survive backup and restore.
  *
- * @covers \backup_plagiarism_originality_plugin
- * @covers \restore_plagiarism_originality_plugin
+ * @covers \backup_plagiarism_uniwise_plugin
+ * @covers \restore_plagiarism_uniwise_plugin
  */
 final class backup_restore_test extends \advanced_testcase {
     /**
@@ -46,9 +46,9 @@ final class backup_restore_test extends \advanced_testcase {
         $this->setAdminUser();
 
         set_config('enableplagiarism', 1);
-        set_config('originality_use', 1, 'plagiarism_originality');
-        set_config('enabled', 1, 'plagiarism_originality');
-        set_config('originality_mod_assign', 1, 'plagiarism_originality');
+        set_config('originality_use', 1, 'plagiarism_uniwise');
+        set_config('enabled', 1, 'plagiarism_uniwise');
+        set_config('originality_mod_assign', 1, 'plagiarism_uniwise');
 
         $course = $this->getDataGenerator()->create_course();
         $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
@@ -61,11 +61,11 @@ final class backup_restore_test extends \advanced_testcase {
             'originality_submit_on' => 1,
             'originality_index_documents' => 1,
         ];
-        (new \plagiarism_plugin_originality())->save_form_elements($data);
+        (new \plagiarism_plugin_uniwise())->save_form_elements($data);
 
         $newcm = duplicate_module($course, $cm);
 
-        $record = $DB->get_record('plagiarism_originality_settings', ['cm' => $newcm->id], '*', MUST_EXIST);
+        $record = $DB->get_record('plagiarism_uniwise_settings', ['cm' => $newcm->id], '*', MUST_EXIST);
         $this->assertEquals(1, $record->enabled);
         $this->assertEquals(1, $record->student_report);
         $this->assertEquals(1, $record->submit_on);

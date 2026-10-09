@@ -15,27 +15,27 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Failed tasks management page for plagiarism_originality.
+ * Failed tasks management page for plagiarism_uniwise.
  *
  * Lists submissions and deletions that failed after all retries, with
  * buttons to re-queue them for another round of attempts.
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 require_once(dirname(dirname(__FILE__)) . '/../config.php');
 require_once($CFG->libdir . '/adminlib.php');
-require_once($CFG->dirroot . '/plagiarism/originality/lib.php');
+require_once($CFG->dirroot . '/plagiarism/uniwise/lib.php');
 
 require_login();
-admin_externalpage_setup('plagiarismoriginality');
+admin_externalpage_setup('plagiarismuniwise');
 
 $context = context_system::instance();
 require_capability('moodle/site:config', $context);
 
-$pageurl = new moodle_url('/plagiarism/originality/failed_tasks.php');
+$pageurl = new moodle_url('/plagiarism/uniwise/failed_tasks.php');
 $PAGE->set_url($pageurl);
 
 // Handle retry actions.
@@ -44,7 +44,7 @@ $retryaction = optional_param('retryaction', '', PARAM_ALPHA);
 $retryall = optional_param('retryall', '', PARAM_ALPHA);
 
 if ($retryid && $retryaction && confirm_sesskey()) {
-    $record = $DB->get_record('plagiarism_originality_files', ['id' => $retryid]);
+    $record = $DB->get_record('plagiarism_uniwise_files', ['id' => $retryid]);
     if ($record) {
         if ($retryaction === 'submit' && (int) $record->status === 3) {
             // Reset status and re-queue submit task.
@@ -52,9 +52,9 @@ if ($retryid && $retryaction && confirm_sesskey()) {
             $record->errorresponse = null;
             $record->attempts = 0;
             $record->timemodified = time();
-            $DB->update_record('plagiarism_originality_files', $record);
+            $DB->update_record('plagiarism_uniwise_files', $record);
 
-            $task = new \plagiarism_originality\task\submit_to_originality();
+            $task = new \plagiarism_uniwise\task\submit_to_originality();
             $task->set_custom_data([
                 'record_id' => $record->id,
                 'attempt' => 1,
@@ -62,7 +62,7 @@ if ($retryid && $retryaction && confirm_sesskey()) {
             \core\task\manager::queue_adhoc_task($task);
         } else if ($retryaction === 'delete' && (int) $record->status === 4) {
             // Re-queue delete task.
-            $task = new \plagiarism_originality\task\delete_from_originality();
+            $task = new \plagiarism_uniwise\task\delete_from_originality();
             $task->set_custom_data([
                 'external_id' => $record->externalid ?? '',
                 'record_id' => $record->id,
@@ -74,23 +74,23 @@ if ($retryid && $retryaction && confirm_sesskey()) {
             $record->status = 1;
             $record->errorresponse = null;
             $record->timemodified = time();
-            $DB->update_record('plagiarism_originality_files', $record);
+            $DB->update_record('plagiarism_uniwise_files', $record);
         }
     }
-    redirect($pageurl, get_string('retryqueued', 'plagiarism_originality'), null, \core\output\notification::NOTIFY_SUCCESS);
+    redirect($pageurl, get_string('retryqueued', 'plagiarism_uniwise'), null, \core\output\notification::NOTIFY_SUCCESS);
 }
 
 if ($retryall && confirm_sesskey()) {
     if ($retryall === 'submit') {
-        $records = $DB->get_records('plagiarism_originality_files', ['status' => 3]);
+        $records = $DB->get_records('plagiarism_uniwise_files', ['status' => 3]);
         foreach ($records as $record) {
             $record->status = 0;
             $record->errorresponse = null;
             $record->attempts = 0;
             $record->timemodified = time();
-            $DB->update_record('plagiarism_originality_files', $record);
+            $DB->update_record('plagiarism_uniwise_files', $record);
 
-            $task = new \plagiarism_originality\task\submit_to_originality();
+            $task = new \plagiarism_uniwise\task\submit_to_originality();
             $task->set_custom_data([
                 'record_id' => $record->id,
                 'attempt' => 1,
@@ -98,9 +98,9 @@ if ($retryall && confirm_sesskey()) {
             \core\task\manager::queue_adhoc_task($task);
         }
     } else if ($retryall === 'delete') {
-        $records = $DB->get_records('plagiarism_originality_files', ['status' => 4]);
+        $records = $DB->get_records('plagiarism_uniwise_files', ['status' => 4]);
         foreach ($records as $record) {
-            $task = new \plagiarism_originality\task\delete_from_originality();
+            $task = new \plagiarism_uniwise\task\delete_from_originality();
             $task->set_custom_data([
                 'external_id' => $record->externalid ?? '',
                 'record_id' => $record->id,
@@ -111,20 +111,20 @@ if ($retryall && confirm_sesskey()) {
             $record->status = 1;
             $record->errorresponse = null;
             $record->timemodified = time();
-            $DB->update_record('plagiarism_originality_files', $record);
+            $DB->update_record('plagiarism_uniwise_files', $record);
         }
     }
-    redirect($pageurl, get_string('retryallqueued', 'plagiarism_originality'), null, \core\output\notification::NOTIFY_SUCCESS);
+    redirect($pageurl, get_string('retryallqueued', 'plagiarism_uniwise'), null, \core\output\notification::NOTIFY_SUCCESS);
 }
 
 // Render the page.
 echo $OUTPUT->header();
 
 // Tab navigation.
-$settingsurl = new moodle_url('/plagiarism/originality/settings.php');
+$settingsurl = new moodle_url('/plagiarism/uniwise/settings.php');
 $tabs = [
-    new tabobject('settings', $settingsurl, get_string('pluginsettings', 'plagiarism_originality')),
-    new tabobject('failedtasks', $pageurl, get_string('failedtasks', 'plagiarism_originality')),
+    new tabobject('settings', $settingsurl, get_string('pluginsettings', 'plagiarism_uniwise')),
+    new tabobject('failedtasks', $pageurl, get_string('failedtasks', 'plagiarism_uniwise')),
 ];
 echo $OUTPUT->tabtree($tabs, 'failedtasks');
 
@@ -158,7 +158,7 @@ $buildwhere = function (int $status, string $search) use ($DB) {
 };
 
 // Failed Submissions.
-echo $OUTPUT->heading(get_string('failedsubmissions', 'plagiarism_originality'), 3);
+echo $OUTPUT->heading(get_string('failedsubmissions', 'plagiarism_uniwise'), 3);
 
 // Search form.
 $searchurl = new moodle_url($pageurl, ['dpage' => $dpage, 'dsearch' => $dsearch]);
@@ -168,7 +168,7 @@ foreach ($searchurl->params() as $k => $v) {
 }
 echo html_writer::empty_tag('input', [
     'type' => 'text', 'name' => 'ssearch', 'value' => $ssearch,
-    'placeholder' => get_string('searchbyidorfile', 'plagiarism_originality'),
+    'placeholder' => get_string('searchbyidorfile', 'plagiarism_uniwise'),
     'class' => 'form-control d-inline-block', 'style' => 'width:300px;',
 ]);
 echo ' ' . html_writer::empty_tag('input', [
@@ -179,16 +179,16 @@ if ($ssearch !== '') {
     $clearurl = new moodle_url($pageurl, ['dpage' => $dpage, 'dsearch' => $dsearch]);
     echo ' ' . html_writer::link(
         $clearurl,
-        get_string('clear', 'plagiarism_originality'),
+        get_string('clear', 'plagiarism_uniwise'),
         ['class' => 'btn btn-link']
     );
 }
 echo '</form>';
 
 [$swhere, $sparams] = $buildwhere(3, $ssearch);
-$submitcount = $DB->count_records_select('plagiarism_originality_files', $swhere, $sparams);
+$submitcount = $DB->count_records_select('plagiarism_uniwise_files', $swhere, $sparams);
 $failedsubmits = $DB->get_records_select(
-    'plagiarism_originality_files',
+    'plagiarism_uniwise_files',
     $swhere,
     $sparams,
     'timemodified DESC',
@@ -200,7 +200,7 @@ $failedsubmits = $DB->get_records_select(
 if ($submitcount == 0) {
     echo html_writer::tag(
         'p',
-        get_string('nofailedsubmissions', 'plagiarism_originality'),
+        get_string('nofailedsubmissions', 'plagiarism_uniwise'),
         ['class' => 'text-muted']
     );
 } else {
@@ -253,27 +253,27 @@ if ($submitcount == 0) {
     $retryallurl = new moodle_url($pageurl, ['retryall' => 'submit', 'sesskey' => sesskey()]);
     echo html_writer::link(
         $retryallurl,
-        get_string('retryall', 'plagiarism_originality'),
+        get_string('retryall', 'plagiarism_uniwise'),
         ['class' => 'btn btn-secondary mb-2']
     );
 
     $table = new html_table();
     $table->head = [
-        get_string('failedcol_id', 'plagiarism_originality'),
-        get_string('failedcol_filename', 'plagiarism_originality'),
-        get_string('failedcol_user', 'plagiarism_originality'),
-        get_string('failedcol_activity', 'plagiarism_originality'),
-        get_string('failedcol_attempts', 'plagiarism_originality'),
-        get_string('failedcol_error', 'plagiarism_originality'),
-        get_string('failedcol_time', 'plagiarism_originality'),
-        get_string('failedcol_action', 'plagiarism_originality'),
+        get_string('failedcol_id', 'plagiarism_uniwise'),
+        get_string('failedcol_filename', 'plagiarism_uniwise'),
+        get_string('failedcol_user', 'plagiarism_uniwise'),
+        get_string('failedcol_activity', 'plagiarism_uniwise'),
+        get_string('failedcol_attempts', 'plagiarism_uniwise'),
+        get_string('failedcol_error', 'plagiarism_uniwise'),
+        get_string('failedcol_time', 'plagiarism_uniwise'),
+        get_string('failedcol_action', 'plagiarism_uniwise'),
     ];
     $table->attributes['class'] = 'generaltable';
     $table->data = [];
 
     foreach ($failedsubmits as $record) {
         $user = $susers[$record->userid] ?? null;
-        $username = $user ? fullname($user) : get_string('unknownuser', 'plagiarism_originality');
+        $username = $user ? fullname($user) : get_string('unknownuser', 'plagiarism_uniwise');
         $activityname = $sactivitynames[$record->cm] ?? '';
 
         $retryurl = new moodle_url($pageurl, [
@@ -283,7 +283,7 @@ if ($submitcount == 0) {
         ]);
         $retrybtn = html_writer::link(
             $retryurl,
-            get_string('retry', 'plagiarism_originality'),
+            get_string('retry', 'plagiarism_uniwise'),
             ['class' => 'btn btn-sm btn-primary']
         );
 
@@ -311,7 +311,7 @@ if ($submitcount == 0) {
 }
 
 // Failed Deletions.
-echo $OUTPUT->heading(get_string('faileddeletions', 'plagiarism_originality'), 3);
+echo $OUTPUT->heading(get_string('faileddeletions', 'plagiarism_uniwise'), 3);
 
 // Search form.
 $searchurl = new moodle_url($pageurl, ['spage' => $spage, 'ssearch' => $ssearch]);
@@ -321,7 +321,7 @@ foreach ($searchurl->params() as $k => $v) {
 }
 echo html_writer::empty_tag('input', [
     'type' => 'text', 'name' => 'dsearch', 'value' => $dsearch,
-    'placeholder' => get_string('searchbyidorfile', 'plagiarism_originality'),
+    'placeholder' => get_string('searchbyidorfile', 'plagiarism_uniwise'),
     'class' => 'form-control d-inline-block', 'style' => 'width:300px;',
 ]);
 echo ' ' . html_writer::empty_tag('input', [
@@ -332,16 +332,16 @@ if ($dsearch !== '') {
     $clearurl = new moodle_url($pageurl, ['spage' => $spage, 'ssearch' => $ssearch]);
     echo ' ' . html_writer::link(
         $clearurl,
-        get_string('clear', 'plagiarism_originality'),
+        get_string('clear', 'plagiarism_uniwise'),
         ['class' => 'btn btn-link']
     );
 }
 echo '</form>';
 
 [$dwhere, $dparams] = $buildwhere(4, $dsearch);
-$deletecount = $DB->count_records_select('plagiarism_originality_files', $dwhere, $dparams);
+$deletecount = $DB->count_records_select('plagiarism_uniwise_files', $dwhere, $dparams);
 $faileddeletes = $DB->get_records_select(
-    'plagiarism_originality_files',
+    'plagiarism_uniwise_files',
     $dwhere,
     $dparams,
     'timemodified DESC',
@@ -353,7 +353,7 @@ $faileddeletes = $DB->get_records_select(
 if ($deletecount == 0) {
     echo html_writer::tag(
         'p',
-        get_string('nofaileddeletions', 'plagiarism_originality'),
+        get_string('nofaileddeletions', 'plagiarism_uniwise'),
         ['class' => 'text-muted']
     );
 } else {
@@ -405,28 +405,28 @@ if ($deletecount == 0) {
     $retryallurl = new moodle_url($pageurl, ['retryall' => 'delete', 'sesskey' => sesskey()]);
     echo html_writer::link(
         $retryallurl,
-        get_string('retryall', 'plagiarism_originality'),
+        get_string('retryall', 'plagiarism_uniwise'),
         ['class' => 'btn btn-secondary mb-2']
     );
 
     $table = new html_table();
     $table->head = [
-        get_string('failedcol_id', 'plagiarism_originality'),
-        get_string('failedcol_filename', 'plagiarism_originality'),
-        get_string('failedcol_user', 'plagiarism_originality'),
-        get_string('failedcol_activity', 'plagiarism_originality'),
-        get_string('failedcol_externalid', 'plagiarism_originality'),
-        get_string('failedcol_attempts', 'plagiarism_originality'),
-        get_string('failedcol_error', 'plagiarism_originality'),
-        get_string('failedcol_time', 'plagiarism_originality'),
-        get_string('failedcol_action', 'plagiarism_originality'),
+        get_string('failedcol_id', 'plagiarism_uniwise'),
+        get_string('failedcol_filename', 'plagiarism_uniwise'),
+        get_string('failedcol_user', 'plagiarism_uniwise'),
+        get_string('failedcol_activity', 'plagiarism_uniwise'),
+        get_string('failedcol_externalid', 'plagiarism_uniwise'),
+        get_string('failedcol_attempts', 'plagiarism_uniwise'),
+        get_string('failedcol_error', 'plagiarism_uniwise'),
+        get_string('failedcol_time', 'plagiarism_uniwise'),
+        get_string('failedcol_action', 'plagiarism_uniwise'),
     ];
     $table->attributes['class'] = 'generaltable';
     $table->data = [];
 
     foreach ($faileddeletes as $record) {
         $user = $dusers[$record->userid] ?? null;
-        $username = $user ? fullname($user) : get_string('unknownuser', 'plagiarism_originality');
+        $username = $user ? fullname($user) : get_string('unknownuser', 'plagiarism_uniwise');
         $activityname = $dactivitynames[$record->cm] ?? '';
 
         $retryurl = new moodle_url($pageurl, [
@@ -436,7 +436,7 @@ if ($deletecount == 0) {
         ]);
         $retrybtn = html_writer::link(
             $retryurl,
-            get_string('retry', 'plagiarism_originality'),
+            get_string('retry', 'plagiarism_uniwise'),
             ['class' => 'btn btn-sm btn-primary']
         );
 

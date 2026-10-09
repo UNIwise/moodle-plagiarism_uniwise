@@ -15,10 +15,10 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Restore support for plagiarism_originality per-activity settings.
+ * Restore support for plagiarism_uniwise per-activity settings.
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -27,7 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 /**
  * Restores the per-activity Originality settings onto the restored course module.
  */
-class restore_plagiarism_originality_plugin extends restore_plagiarism_plugin {
+class restore_plagiarism_uniwise_plugin extends restore_plagiarism_plugin {
     /**
      * Define the module plugin structure.
      *
@@ -59,11 +59,11 @@ class restore_plagiarism_originality_plugin extends restore_plagiarism_plugin {
         ];
 
         // The cm column is unique, so update if a record was already created for the new module.
-        if ($existingid = $DB->get_field('plagiarism_originality_settings', 'id', ['cm' => $cmid])) {
+        if ($existingid = $DB->get_field('plagiarism_uniwise_settings', 'id', ['cm' => $cmid])) {
             $record->id = $existingid;
-            $DB->update_record('plagiarism_originality_settings', $record);
+            $DB->update_record('plagiarism_uniwise_settings', $record);
         } else {
-            $DB->insert_record('plagiarism_originality_settings', $record);
+            $DB->insert_record('plagiarism_uniwise_settings', $record);
         }
     }
 }

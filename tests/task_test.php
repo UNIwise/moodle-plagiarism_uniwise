@@ -15,37 +15,37 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Unit tests for the plagiarism_originality adhoc and scheduled tasks.
+ * Unit tests for the plagiarism_uniwise adhoc and scheduled tasks.
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace plagiarism_originality;
+namespace plagiarism_uniwise;
 
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
-require_once($CFG->dirroot . '/plagiarism/originality/lib.php');
+require_once($CFG->dirroot . '/plagiarism/uniwise/lib.php');
 
 /**
  * Tests for the task classes.
  *
- * @covers \plagiarism_originality\task\submit_to_originality
- * @covers \plagiarism_originality\task\delete_from_originality
- * @covers \plagiarism_originality\task\submit_files
+ * @covers \plagiarism_uniwise\task\submit_to_originality
+ * @covers \plagiarism_uniwise\task\delete_from_originality
+ * @covers \plagiarism_uniwise\task\submit_files
  */
-#[\PHPUnit\Framework\Attributes\CoversClass(\plagiarism_originality\task\submit_to_originality::class)]
-#[\PHPUnit\Framework\Attributes\CoversClass(\plagiarism_originality\task\delete_from_originality::class)]
-#[\PHPUnit\Framework\Attributes\CoversClass(\plagiarism_originality\task\submit_files::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\plagiarism_uniwise\task\submit_to_originality::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\plagiarism_uniwise\task\delete_from_originality::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\plagiarism_uniwise\task\submit_files::class)]
 final class task_test extends \advanced_testcase {
     // Submit to originality - record not found.
 
     /**
      * Test that the submit task skips a missing record.
      *
-     * @covers \plagiarism_originality\task\submit_to_originality::execute
+     * @covers \plagiarism_uniwise\task\submit_to_originality::execute
      */
     public function test_submit_task_skips_missing_record(): void {
         $this->resetAfterTest();
@@ -63,7 +63,7 @@ final class task_test extends \advanced_testcase {
     /**
      * Test that the submit task skips an already submitted record.
      *
-     * @covers \plagiarism_originality\task\submit_to_originality::execute
+     * @covers \plagiarism_uniwise\task\submit_to_originality::execute
      */
     public function test_submit_task_skips_already_submitted_record(): void {
         global $DB;
@@ -73,7 +73,7 @@ final class task_test extends \advanced_testcase {
         $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
         $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
 
-        $recordid = $DB->insert_record('plagiarism_originality_files', (object) [
+        $recordid = $DB->insert_record('plagiarism_uniwise_files', (object) [
             'cm' => $assign->cmid,
             'userid' => $student->id,
             'identifier' => 'testhash',
@@ -95,14 +95,14 @@ final class task_test extends \advanced_testcase {
         $task->execute();
 
         // Record should remain status=1.
-        $record = $DB->get_record('plagiarism_originality_files', ['id' => $recordid]);
+        $record = $DB->get_record('plagiarism_uniwise_files', ['id' => $recordid]);
         $this->assertEquals(1, (int) $record->status);
     }
 
     /**
      * Test that the submit task skips a completed record.
      *
-     * @covers \plagiarism_originality\task\submit_to_originality::execute
+     * @covers \plagiarism_uniwise\task\submit_to_originality::execute
      */
     public function test_submit_task_skips_completed_record(): void {
         global $DB;
@@ -112,7 +112,7 @@ final class task_test extends \advanced_testcase {
         $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
         $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
 
-        $recordid = $DB->insert_record('plagiarism_originality_files', (object) [
+        $recordid = $DB->insert_record('plagiarism_uniwise_files', (object) [
             'cm' => $assign->cmid,
             'userid' => $student->id,
             'identifier' => 'testhash',
@@ -135,7 +135,7 @@ final class task_test extends \advanced_testcase {
         $task->execute();
 
         // Record should remain unchanged.
-        $record = $DB->get_record('plagiarism_originality_files', ['id' => $recordid]);
+        $record = $DB->get_record('plagiarism_uniwise_files', ['id' => $recordid]);
         $this->assertEquals(2, (int) $record->status);
         $this->assertEquals(25, (int) $record->score);
     }
@@ -143,22 +143,22 @@ final class task_test extends \advanced_testcase {
     /**
      * Test that the submit task retries onlinetext when submission data is not found.
      *
-     * @covers \plagiarism_originality\task\submit_to_originality::execute
+     * @covers \plagiarism_uniwise\task\submit_to_originality::execute
      */
     public function test_submit_task_retries_onlinetext_when_submission_missing(): void {
         global $DB;
         $this->resetAfterTest();
 
-        set_config('originality_use', 1, 'plagiarism_originality');
-        set_config('originality_api_url', 'https://api.example.com', 'plagiarism_originality');
-        set_config('originality_client_id', 'testid', 'plagiarism_originality');
-        set_config('originality_client_secret', 'testsecret', 'plagiarism_originality');
+        set_config('originality_use', 1, 'plagiarism_uniwise');
+        set_config('originality_api_url', 'https://api.example.com', 'plagiarism_uniwise');
+        set_config('originality_client_id', 'testid', 'plagiarism_uniwise');
+        set_config('originality_client_secret', 'testsecret', 'plagiarism_uniwise');
 
         $course = $this->getDataGenerator()->create_course();
         $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
         $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
 
-        $recordid = $DB->insert_record('plagiarism_originality_files', (object) [
+        $recordid = $DB->insert_record('plagiarism_uniwise_files', (object) [
             'cm' => $assign->cmid,
             'userid' => $student->id,
             'identifier' => sha1('some text'),
@@ -180,7 +180,7 @@ final class task_test extends \advanced_testcase {
         $task->execute();
 
         // Record should remain status=0 (will retry).
-        $record = $DB->get_record('plagiarism_originality_files', ['id' => $recordid]);
+        $record = $DB->get_record('plagiarism_uniwise_files', ['id' => $recordid]);
         $this->assertEquals(0, (int) $record->status);
         $this->assertEquals(1, (int) $record->attempts);
     }
@@ -190,7 +190,7 @@ final class task_test extends \advanced_testcase {
     /**
      * Test that the delete task cleans up a record without an external ID.
      *
-     * @covers \plagiarism_originality\task\delete_from_originality::execute
+     * @covers \plagiarism_uniwise\task\delete_from_originality::execute
      */
     public function test_delete_task_cleans_up_record_without_external_id(): void {
         global $DB;
@@ -200,7 +200,7 @@ final class task_test extends \advanced_testcase {
         $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
         $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
 
-        $recordid = $DB->insert_record('plagiarism_originality_files', (object) [
+        $recordid = $DB->insert_record('plagiarism_uniwise_files', (object) [
             'cm' => $assign->cmid,
             'userid' => $student->id,
             'identifier' => 'testhash',
@@ -223,7 +223,7 @@ final class task_test extends \advanced_testcase {
         $task->execute();
 
         // Record should be deleted.
-        $exists = $DB->record_exists('plagiarism_originality_files', ['id' => $recordid]);
+        $exists = $DB->record_exists('plagiarism_uniwise_files', ['id' => $recordid]);
         $this->assertFalse($exists);
     }
 
@@ -232,19 +232,19 @@ final class task_test extends \advanced_testcase {
     /**
      * Test that the submit files task exits when the plugin is disabled.
      *
-     * @covers \plagiarism_originality\task\submit_files::execute
+     * @covers \plagiarism_uniwise\task\submit_files::execute
      */
     public function test_submit_files_task_exits_when_plugin_disabled(): void {
         global $DB;
         $this->resetAfterTest();
 
-        set_config('originality_use', 0, 'plagiarism_originality');
+        set_config('originality_use', 0, 'plagiarism_uniwise');
 
         $course = $this->getDataGenerator()->create_course();
         $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
         $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
 
-        $DB->insert_record('plagiarism_originality_files', (object) [
+        $DB->insert_record('plagiarism_uniwise_files', (object) [
             'cm' => $assign->cmid,
             'userid' => $student->id,
             'identifier' => 'testhash',
@@ -261,7 +261,7 @@ final class task_test extends \advanced_testcase {
         $task->execute();
 
         // Record should remain unchanged.
-        $record = $DB->get_record('plagiarism_originality_files', [
+        $record = $DB->get_record('plagiarism_uniwise_files', [
             'cm' => $assign->cmid,
             'userid' => $student->id,
         ]);
@@ -271,7 +271,7 @@ final class task_test extends \advanced_testcase {
     /**
      * Test that the submit files task has the correct name.
      *
-     * @covers \plagiarism_originality\task\submit_files::get_name
+     * @covers \plagiarism_uniwise\task\submit_files::get_name
      */
     public function test_submit_files_task_has_correct_name(): void {
         $task = new task\submit_files();

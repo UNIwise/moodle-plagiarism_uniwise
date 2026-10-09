@@ -19,12 +19,12 @@
  *
  * Handles OAuth2 client-credentials token retrieval and file submission.
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace plagiarism_originality;
+namespace plagiarism_uniwise;
 
 /**
  * Client for communicating with the external plagiarism checking service.
@@ -52,13 +52,13 @@ class api_client {
      * @throws \moodle_exception If required config is missing.
      */
     public static function create(): self {
-        $config = get_config('plagiarism_originality');
+        $config = get_config('plagiarism_uniwise');
         $apiurl = $config->originality_api_url ?? '';
         $clientid = $config->originality_client_id ?? '';
         $clientsecret = $config->originality_client_secret ?? '';
 
         if (empty($apiurl) || empty($clientid) || empty($clientsecret)) {
-            throw new \moodle_exception('missingconfig', 'plagiarism_originality');
+            throw new \moodle_exception('missingconfig', 'plagiarism_uniwise');
         }
 
         return new self($apiurl, $clientid, $clientsecret);
@@ -81,71 +81,99 @@ class api_client {
     /**
      * Obtain an access token using the OAuth2 client-credentials grant.
      *
-     * Tokens are cached persistently via plugin config and reused across requests
+     * Tokens are kept in the application cache and reused across requests
      * until they expire (with a 30-second safety margin).
      *
      * @return string The bearer access token.
      * @throws \moodle_exception On authentication failure.
      */
     public function get_access_token(): string {
-        // Check in-memory cache first.
         if ($this->accesstoken !== null && time() < ($this->tokenexpiry - 30)) {
             return $this->accesstoken;
         }
 
-        // Check persistent cache (survives across requests).
-        $cachedtoken = get_config('plagiarism_originality', 'cached_access_token');
-        $cachedexpiry = (int) get_config('plagiarism_originality', 'cached_token_expiry');
-        if (!empty($cachedtoken) && time() < ($cachedexpiry - 30)) {
-            $this->accesstoken = $cachedtoken;
-            $this->tokenexpiry = $cachedexpiry;
+        $cache = \cache::make('plagiarism_uniwise', 'accesstoken');
+        $cachekey = $this->get_token_cache_key();
+        $cached = $cache->get($cachekey);
+        if (!empty($cached['token']) && time() < ((int) $cached['expiry'] - 30)) {
+            $this->accesstoken = $cached['token'];
+            $this->tokenexpiry = (int) $cached['expiry'];
             return $this->accesstoken;
         }
 
-        $tokenurl = $this->apiurl . '/v1/oauth/token';
+        $postfields = http_build_query([
+            'grant_type' => 'client_credentials',
+            'client_id' => $this->clientid,
+            'client_secret' => $this->clientsecret,
+        ], '', '&', PHP_QUERY_RFC1738);
 
-        $postfields = 'grant_type=client_credentials' .
-                      '&client_id=' . $this->clientid .
-                      '&client_secret=' . $this->clientsecret;
-
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL            => $tokenurl,
-            CURLOPT_POST           => true,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_POSTREDIR      => CURL_REDIR_POST_ALL,
-            CURLOPT_HTTPHEADER     => [
-                'Content-Type: application/x-www-form-urlencoded',
-                'Accept: application/json',
-            ],
-            CURLOPT_POSTFIELDS     => $postfields,
-        ]);
-
-        $response = curl_exec($ch);
-        $httpcode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlerror = curl_error($ch);
-        curl_close($ch);
-
-        if (!empty($curlerror)) {
-            throw new \moodle_exception('apierror', 'plagiarism_originality', '', 'cURL error: ' . $curlerror);
-        }
+        [$httpcode, $response] = $this->send(
+            'POST',
+            $this->apiurl . '/v1/oauth/token',
+            $postfields,
+            ['Content-Type: application/x-www-form-urlencoded'],
+            false
+        );
 
         $data = json_decode($response, true);
 
         if ($httpcode !== 200 || empty($data['access_token'])) {
             $error = $data['error_description'] ?? $data['error'] ?? $data['message'] ?? $response;
-            throw new \moodle_exception('apierror', 'plagiarism_originality', '', $error);
+            throw new \moodle_exception('apierror', 'plagiarism_uniwise', '', $error);
         }
 
         $this->accesstoken = $data['access_token'];
-        $this->tokenexpiry = time() + ($data['expires_in'] ?? 3600);
-
-        // Persist token across requests.
-        set_config('cached_access_token', $this->accesstoken, 'plagiarism_originality');
-        set_config('cached_token_expiry', $this->tokenexpiry, 'plagiarism_originality');
+        $this->tokenexpiry = time() + (int) ($data['expires_in'] ?? 3600);
+        $cache->set($cachekey, ['token' => $this->accesstoken, 'expiry' => $this->tokenexpiry]);
 
         return $this->accesstoken;
+    }
+
+    /**
+     * Cache key for the access token, so changing the endpoint or client ID uses a fresh token.
+     *
+     * @return string
+     */
+    private function get_token_cache_key(): string {
+        return sha1($this->apiurl . '|' . $this->clientid);
+    }
+
+    /**
+     * Send an HTTP request using Moodle's curl wrapper, which applies the site's proxy and security settings.
+     *
+     * @param string $method GET, POST or DELETE.
+     * @param string $url The full request URL.
+     * @param array|string $params POST body (array for multipart, string for raw).
+     * @param array $headers Additional request headers.
+     * @param bool $auth Whether to send the bearer token.
+     * @return array [int $httpcode, string $body]
+     * @throws \moodle_exception On transport failure or blocked URL.
+     */
+    private function send(string $method, string $url, $params = '', array $headers = [], bool $auth = true): array {
+        global $CFG;
+        require_once($CFG->libdir . '/filelib.php');
+
+        $headers[] = 'Accept: application/json';
+        if ($auth) {
+            $headers[] = 'Authorization: Bearer ' . $this->get_access_token();
+        }
+
+        $curl = new \curl();
+        $curl->setHeader($headers);
+
+        if ($method === 'GET') {
+            $response = $curl->get($url);
+        } else if ($method === 'DELETE') {
+            $response = $curl->delete($url);
+        } else {
+            $response = $curl->post($url, $params);
+        }
+
+        if (!empty($curl->error)) {
+            throw new \moodle_exception('apierror', 'plagiarism_uniwise', '', 'cURL error: ' . $curl->error);
+        }
+
+        return [(int) ($curl->get_info()['http_code'] ?? 0), (string) $response];
     }
 
     /**
@@ -159,61 +187,19 @@ class api_client {
      * @throws \moodle_exception On submission failure.
      */
     public function submit_file(\stored_file $file, int $cmid, int $userid, bool $index = false): array {
-        $token = $this->get_access_token();
-        $submiturl = $this->apiurl . '/v1/documents';
-
-        // Resolve course ID from the course module.
-        $cm = get_coursemodule_from_id('', $cmid);
-        $courseid = $cm ? (int) $cm->course : 0;
-
-        // Use native curl to ensure multipart form-data is sent correctly
-        // and redirects are followed properly (Moodle's curl wrapper blocks FOLLOWLOCATION).
         $tmppath = make_request_directory() . '/' . $file->get_filename();
         $file->copy_content_to($tmppath);
 
-        $context = json_encode([
-            'moodle_course_id' => (string) $courseid,
-            'moodle_cm_id'     => (string) $cmid,
-            'moodle_user_id'   => (string) $userid,
-        ]);
-
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $submiturl,
-            CURLOPT_POST => true,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $token,
-                'Accept: application/json',
-            ],
-            CURLOPT_POSTFIELDS => [
-                'file'    => new \CURLFile($tmppath, $file->get_mimetype(), $file->get_filename()),
-                'index'   => $index ? 'true' : 'false',
-                'analyze' => 'true',
-                'context' => $context,
-            ],
-        ]);
-
-        $response = curl_exec($ch);
-        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlerror = curl_error($ch);
-        curl_close($ch);
-
-        @unlink($tmppath);
-
-        if (!empty($curlerror)) {
-            throw new \moodle_exception('apierror', 'plagiarism_originality', '', 'cURL error: ' . $curlerror);
+        try {
+            return $this->submit_document(
+                new \CURLFile($tmppath, $file->get_mimetype(), $file->get_filename()),
+                $cmid,
+                $userid,
+                $index
+            );
+        } finally {
+            @unlink($tmppath);
         }
-
-        $data = json_decode($response, true);
-
-        if ($httpcode < 200 || $httpcode >= 300 || $data === null) {
-            $error = $this->extract_api_error($data, $response);
-            throw new \moodle_exception('apierror', 'plagiarism_originality', '', $error);
-        }
-
-        return $data;
     }
 
     /**
@@ -227,15 +213,29 @@ class api_client {
      * @throws \moodle_exception On submission failure.
      */
     public function submit_text(string $content, int $cmid, int $userid, bool $index = false): array {
-        $token = $this->get_access_token();
-        $submiturl = $this->apiurl . '/v1/documents';
-
-        // Resolve course ID from the course module.
-        $cm = get_coursemodule_from_id('', $cmid);
-        $courseid = $cm ? (int) $cm->course : 0;
-
         $tmppath = make_request_directory() . '/onlinetext_' . $userid . '_' . $cmid . '.txt';
         file_put_contents($tmppath, $content);
+
+        try {
+            return $this->submit_document(new \CURLFile($tmppath, 'text/plain', 'onlinetext.txt'), $cmid, $userid, $index);
+        } finally {
+            @unlink($tmppath);
+        }
+    }
+
+    /**
+     * Upload a document to the external service as multipart form data.
+     *
+     * @param \CURLFile $upload The file to upload.
+     * @param int $cmid The course module ID.
+     * @param int $userid The submitting user.
+     * @param bool $index Whether the document should be indexed by the service.
+     * @return array The decoded JSON response.
+     * @throws \moodle_exception On submission failure.
+     */
+    private function submit_document(\CURLFile $upload, int $cmid, int $userid, bool $index): array {
+        $cm = get_coursemodule_from_id('', $cmid);
+        $courseid = $cm ? (int) $cm->course : 0;
 
         $context = json_encode([
             'moodle_course_id' => (string) $courseid,
@@ -243,40 +243,30 @@ class api_client {
             'moodle_user_id'   => (string) $userid,
         ]);
 
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $submiturl,
-            CURLOPT_POST => true,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $token,
-                'Accept: application/json',
-            ],
-            CURLOPT_POSTFIELDS => [
-                'file'    => new \CURLFile($tmppath, 'text/plain', 'onlinetext.txt'),
-                'index'   => $index ? 'true' : 'false',
-                'analyze' => 'true',
-                'context' => $context,
-            ],
+        [$httpcode, $response] = $this->send('POST', $this->apiurl . '/v1/documents', [
+            'file'    => $upload,
+            'index'   => $index ? 'true' : 'false',
+            'analyze' => 'true',
+            'context' => $context,
         ]);
 
-        $response = curl_exec($ch);
-        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlerror = curl_error($ch);
-        curl_close($ch);
+        return $this->decode_response($httpcode, $response);
+    }
 
-        @unlink($tmppath);
-
-        if (!empty($curlerror)) {
-            throw new \moodle_exception('apierror', 'plagiarism_originality', '', 'cURL error: ' . $curlerror);
-        }
-
+    /**
+     * Decode a JSON API response, throwing on non-2xx status or invalid JSON.
+     *
+     * @param int $httpcode HTTP status code.
+     * @param string $response Raw response body.
+     * @return array
+     * @throws \moodle_exception
+     */
+    private function decode_response(int $httpcode, string $response): array {
         $data = json_decode($response, true);
 
-        if ($httpcode < 200 || $httpcode >= 300 || $data === null) {
-            $error = $this->extract_api_error($data, $response);
-            throw new \moodle_exception('apierror', 'plagiarism_originality', '', $error);
+        if ($httpcode < 200 || $httpcode >= 300 || !is_array($data)) {
+            $error = $this->extract_api_error(is_array($data) ? $data : null, $response);
+            throw new \moodle_exception('apierror', 'plagiarism_uniwise', '', $error);
         }
 
         return $data;
@@ -293,41 +283,20 @@ class api_client {
      * @throws \moodle_exception On request failure.
      */
     public function search_documents(string $contextkey, string $contextvalue): array {
-        $token = $this->get_access_token();
-        $searchurl = $this->apiurl . '/v1/documents/search';
-
         $body = json_encode([
             'context' => [
                 $contextkey => $contextvalue,
             ],
         ]);
 
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL            => $searchurl,
-            CURLOPT_POST           => true,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTPHEADER     => [
-                'Authorization: Bearer ' . $token,
-                'Content-Type: application/json',
-                'Accept: application/json',
-            ],
-            CURLOPT_POSTFIELDS     => $body,
-        ]);
+        [$httpcode, $response] = $this->send(
+            'POST',
+            $this->apiurl . '/v1/documents/search',
+            $body,
+            ['Content-Type: application/json']
+        );
 
-        $response = curl_exec($ch);
-        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        $data = json_decode($response, true);
-
-        if ($httpcode < 200 || $httpcode >= 300 || $data === null) {
-            $error = $this->extract_api_error($data, $response);
-            throw new \moodle_exception('apierror', 'plagiarism_originality', '', $error);
-        }
-
-        return $data;
+        return $this->decode_response($httpcode, $response);
     }
 
     /**
@@ -338,32 +307,9 @@ class api_client {
      * @throws \moodle_exception On request failure.
      */
     public function get_submission_status(string $externalid): array {
-        $token = $this->get_access_token();
-        $statusurl = $this->apiurl . '/v1/documents/' . urlencode($externalid);
+        [$httpcode, $response] = $this->send('GET', $this->apiurl . '/v1/documents/' . urlencode($externalid));
 
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $statusurl,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $token,
-                'Accept: application/json',
-            ],
-        ]);
-
-        $response = curl_exec($ch);
-        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        $data = json_decode($response, true);
-
-        if ($httpcode < 200 || $httpcode >= 300 || $data === null) {
-            $error = $this->extract_api_error($data, $response);
-            throw new \moodle_exception('apierror', 'plagiarism_originality', '', $error);
-        }
-
-        return $data;
+        return $this->decode_response($httpcode, $response);
     }
 
     /**
@@ -373,35 +319,18 @@ class api_client {
      * @throws \moodle_exception On request failure.
      */
     public function delete_document(string $externalid): void {
-        $token = $this->get_access_token();
-        $deleteurl = $this->apiurl . '/v1/documents/' . urlencode($externalid);
-
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL            => $deleteurl,
-            CURLOPT_CUSTOMREQUEST  => 'DELETE',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTPHEADER     => [
-                'Authorization: Bearer ' . $token,
-                'Accept: application/json',
-            ],
-        ]);
-
-        $response = curl_exec($ch);
-        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        [$httpcode, $response] = $this->send('DELETE', $this->apiurl . '/v1/documents/' . urlencode($externalid));
 
         // 200, 204, 404 are all acceptable (404 means already gone).
         if ($httpcode >= 300 && $httpcode !== 404) {
             $data = json_decode($response, true);
-            $error = $this->extract_api_error($data, $response);
-            throw new \moodle_exception('apierror', 'plagiarism_originality', '', $error);
+            $error = $this->extract_api_error(is_array($data) ? $data : null, $response);
+            throw new \moodle_exception('apierror', 'plagiarism_uniwise', '', $error);
         }
     }
 
     /**
-     * Extract a human-readable error message from a Wiseflow API error response.
+     * Extract a human-readable error message from a UNIwise Originality API error response.
      *
      * @param array|null $data Decoded JSON response, if available.
      * @param string $rawresponse Raw response body as fallback.

@@ -17,18 +17,18 @@
 /**
  * Adhoc task to submit a file to the Originality API with exponential backoff retry.
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace plagiarism_originality\task;
+namespace plagiarism_uniwise\task;
 
 /**
  * Adhoc task: submit a file or text to the external Originality service.
  *
  * Custom data expected:
- *   - record_id: int  (plagiarism_originality_files.id)
+ *   - record_id: int  (plagiarism_uniwise_files.id)
  *   - attempt:   int  (current attempt number, starts at 1)
  */
 class submit_to_originality extends \core\task\adhoc_task {
@@ -41,13 +41,13 @@ class submit_to_originality extends \core\task\adhoc_task {
     public function execute(): void {
         global $DB, $CFG;
 
-        require_once($CFG->dirroot . '/plagiarism/originality/lib.php');
+        require_once($CFG->dirroot . '/plagiarism/uniwise/lib.php');
 
         $data = $this->get_custom_data();
         $recordid = (int) $data->record_id;
         $attempt = (int) ($data->attempt ?? 1);
 
-        $record = $DB->get_record('plagiarism_originality_files', ['id' => $recordid]);
+        $record = $DB->get_record('plagiarism_uniwise_files', ['id' => $recordid]);
         if (!$record) {
             mtrace("Originality submit task: record {$recordid} not found, skipping.");
             return;
@@ -60,7 +60,7 @@ class submit_to_originality extends \core\task\adhoc_task {
         }
 
         try {
-            $client = \plagiarism_originality\api_client::create();
+            $client = \plagiarism_uniwise\api_client::create();
 
             $index = $this->should_index((int) $record->cm);
 
@@ -75,7 +75,7 @@ class submit_to_originality extends \core\task\adhoc_task {
             $record->attempts = $attempt;
             $record->errorresponse = null;
             $record->timemodified = time();
-            $DB->update_record('plagiarism_originality_files', $record);
+            $DB->update_record('plagiarism_uniwise_files', $record);
 
             mtrace("Originality submit task: record {$recordid} submitted successfully on attempt {$attempt}.");
         } catch (\Exception $e) {
@@ -85,11 +85,11 @@ class submit_to_originality extends \core\task\adhoc_task {
 
             if ($attempt >= self::MAX_ATTEMPTS) {
                 $record->status = 3; // Final error.
-                $DB->update_record('plagiarism_originality_files', $record);
+                $DB->update_record('plagiarism_uniwise_files', $record);
                 mtrace("Originality submit task: record {$recordid} failed after {$attempt} attempts: " . $e->getMessage());
             } else {
                 $record->status = 0; // Still pending, will retry.
-                $DB->update_record('plagiarism_originality_files', $record);
+                $DB->update_record('plagiarism_uniwise_files', $record);
 
                 // Schedule retry with exponential backoff: 30s, 120s, 480s, 1920s.
                 $delay = 30 * pow(4, $attempt - 1);
@@ -118,34 +118,34 @@ class submit_to_originality extends \core\task\adhoc_task {
     private function should_index(int $cmid): bool {
         global $DB;
 
-        $modsettings = $DB->get_record('plagiarism_originality_settings', ['cm' => $cmid]);
+        $modsettings = $DB->get_record('plagiarism_uniwise_settings', ['cm' => $cmid]);
         if ($modsettings !== false && isset($modsettings->index_documents)) {
             return (bool) $modsettings->index_documents;
         }
 
-        return (bool) get_config('plagiarism_originality', 'originality_index_documents');
+        return (bool) get_config('plagiarism_uniwise', 'originality_index_documents');
     }
 
     /**
      * Submit a file record to the external service.
      *
      * @param \moodle_database $DB
-     * @param \plagiarism_originality\api_client $client
-     * @param object $record The plagiarism_originality_files record.
+     * @param \plagiarism_uniwise\api_client $client
+     * @param object $record The plagiarism_uniwise_files record.
      * @param bool $index Whether the document should be indexed by the service.
      * @return array The API response.
      * @throws \moodle_exception If the file cannot be found or submitted.
      */
-    private function submit_file_record(\moodle_database $DB, \plagiarism_originality\api_client $client, object $record, bool $index = false): array {
+    private function submit_file_record(\moodle_database $DB, \plagiarism_uniwise\api_client $client, object $record, bool $index = false): array {
         $fs = get_file_storage();
         $cm = get_coursemodule_from_id('', (int) $record->cm);
         if (!$cm) {
-            throw new \moodle_exception('apierror', 'plagiarism_originality', '',
+            throw new \moodle_exception('apierror', 'plagiarism_uniwise', '',
                 "Course module {$record->cm} not found for record {$record->id}.");
         }
         $context = \context_module::instance($cm->id, IGNORE_MISSING);
         if (!$context) {
-            throw new \moodle_exception('apierror', 'plagiarism_originality', '',
+            throw new \moodle_exception('apierror', 'plagiarism_uniwise', '',
                 "Context not found for cm {$record->cm}.");
         }
 
@@ -162,13 +162,13 @@ class submit_to_originality extends \core\task\adhoc_task {
 
         $filerecord = reset($files);
         if (!$filerecord) {
-            throw new \moodle_exception('apierror', 'plagiarism_originality', '',
+            throw new \moodle_exception('apierror', 'plagiarism_uniwise', '',
                 "Cannot find file with hash {$record->identifier} for record {$record->id}.");
         }
 
         $file = $fs->get_file_by_id($filerecord->id);
         if (!$file || $file->is_directory()) {
-            throw new \moodle_exception('apierror', 'plagiarism_originality', '',
+            throw new \moodle_exception('apierror', 'plagiarism_uniwise', '',
                 "File not valid for record {$record->id}.");
         }
 
@@ -179,16 +179,16 @@ class submit_to_originality extends \core\task\adhoc_task {
      * Submit online text content to the external service.
      *
      * @param \moodle_database $DB
-     * @param \plagiarism_originality\api_client $client
-     * @param object $record The plagiarism_originality_files record.
+     * @param \plagiarism_uniwise\api_client $client
+     * @param object $record The plagiarism_uniwise_files record.
      * @param bool $index Whether the document should be indexed by the service.
      * @return array The API response.
      * @throws \moodle_exception If the text content cannot be found or submitted.
      */
-    private function submit_onlinetext(\moodle_database $DB, \plagiarism_originality\api_client $client, object $record, bool $index = false): array {
+    private function submit_onlinetext(\moodle_database $DB, \plagiarism_uniwise\api_client $client, object $record, bool $index = false): array {
         $cm = get_coursemodule_from_id('', (int) $record->cm);
         if (!$cm) {
-            throw new \moodle_exception('apierror', 'plagiarism_originality', '',
+            throw new \moodle_exception('apierror', 'plagiarism_uniwise', '',
                 "Course module {$record->cm} not found for record {$record->id}.");
         }
 
@@ -199,7 +199,7 @@ class submit_to_originality extends \core\task\adhoc_task {
         ], '*', IGNORE_MULTIPLE);
 
         if (!$submission) {
-            throw new \moodle_exception('apierror', 'plagiarism_originality', '',
+            throw new \moodle_exception('apierror', 'plagiarism_uniwise', '',
                 "Submission not found for user {$record->userid} in assignment {$cm->instance}.");
         }
 
@@ -209,13 +209,13 @@ class submit_to_originality extends \core\task\adhoc_task {
         ]);
 
         if (!$onlinetext || empty($onlinetext->onlinetext)) {
-            throw new \moodle_exception('apierror', 'plagiarism_originality', '',
+            throw new \moodle_exception('apierror', 'plagiarism_uniwise', '',
                 "Online text not found for record {$record->id}.");
         }
 
         // Verify the content matches (identifier is sha1 of content).
         if (sha1($onlinetext->onlinetext) !== $record->identifier) {
-            throw new \moodle_exception('apierror', 'plagiarism_originality', '',
+            throw new \moodle_exception('apierror', 'plagiarism_uniwise', '',
                 "Online text content hash mismatch for record {$record->id}.");
         }
 

@@ -15,10 +15,10 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Scheduled tasks for plagiarism_originality.
+ * Scheduled tasks for plagiarism_uniwise.
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -26,7 +26,7 @@ defined('MOODLE_INTERNAL') || die();
 
 $tasks = [
     [
-        'classname' => '\plagiarism_originality\task\submit_files',
+        'classname' => '\plagiarism_uniwise\task\submit_files',
         'blocking'  => 0,
         'minute'    => '*/5',
         'hour'      => '*',

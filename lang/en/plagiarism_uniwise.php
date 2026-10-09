@@ -15,10 +15,10 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Language strings for the Wiseflow Originality plagiarism plugin.
+ * Language strings for the UNIwise Originality plagiarism plugin.
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -30,16 +30,18 @@ $string['allow_student_report_help'] = 'When enabled, teachers can allow student
 $string['apierror'] = 'Originality API error: {$a}';
 $string['apisettings'] = 'API connection settings';
 $string['apiurl'] = 'API endpoint URL';
-$string['apiurl_help'] = 'The base URL of the plagiarism service API (e.g. http://localhost:8888). Token and document endpoints are derived automatically.';
+$string['apiurl_help'] = 'The base URL of the plagiarism service API provided by UNIwise (e.g. https://api.example.com). Token and document endpoints are derived automatically.';
+$string['cachedef_accesstoken'] = 'OAuth2 access tokens for the UNIwise Originality API';
 $string['clear'] = 'Clear';
 $string['clientid'] = 'Client ID';
 $string['clientid_help'] = 'The OAuth2 client ID provided by the plagiarism service.';
 $string['clientsecret'] = 'Client secret';
 $string['clientsecret_help'] = 'The OAuth2 client secret provided by the plagiarism service.';
-$string['enable_mod_assign'] = 'Enable for Assignments';
-$string['enable_mod_forum'] = 'Enable for Forums';
-$string['enable_mod_quiz'] = 'Enable for Quizzes (essay questions)';
-$string['enable_mod_workshop'] = 'Enable for Workshops';
+$string['enable_mod_assign'] = 'Enable for assignments';
+$string['enable_mod_forum'] = 'Enable for forums';
+$string['enable_mod_quiz'] = 'Enable for quizzes (essay questions)';
+$string['enable_mod_workshop'] = 'Enable for workshops';
+$string['externalprocessingfailed'] = 'External processing failed';
 $string['failedcol_action'] = 'Action';
 $string['failedcol_activity'] = 'Activity';
 $string['failedcol_attempts'] = 'Attempts';
@@ -58,20 +60,35 @@ $string['indexsettings'] = 'Indexing';
 $string['missingconfig'] = 'Originality plugin is not fully configured. Please set API URL, client ID and secret.';
 $string['nofaileddeletions'] = 'No failed deletions.';
 $string['nofailedsubmissions'] = 'No failed submissions.';
-$string['originality'] = 'originality template plagiarism plugin';
-$string['originality:viewreport'] = 'View plagiarism reports for other users';
 $string['originality_enable'] = 'Enable Originality for this activity';
-$string['originalityexplain'] = 'For more information on this plugin see: ';
-$string['pluginname'] = 'Wiseflow Originality plagiarism plugin';
+$string['pluginname'] = 'UNIwise Originality plagiarism plugin';
 $string['pluginsettings'] = 'Settings';
-$string['report_fetch_error'] = 'Could not fetch the plagiarism report: {$a}';
+$string['privacy:metadata:plagiarism_uniwise_client'] = 'To check submissions for plagiarism, data is sent to the external UNIwise Originality service.';
+$string['privacy:metadata:plagiarism_uniwise_client:coursemoduleid'] = 'The ID of the course module the submission belongs to.';
+$string['privacy:metadata:plagiarism_uniwise_client:courseid'] = 'The ID of the course the submission belongs to.';
+$string['privacy:metadata:plagiarism_uniwise_client:filename'] = 'The name of the submitted file.';
+$string['privacy:metadata:plagiarism_uniwise_client:submission_content'] = 'The content of the submitted file or online text.';
+$string['privacy:metadata:plagiarism_uniwise_client:userid'] = 'The Moodle ID of the user who made the submission.';
+$string['privacy:metadata:plagiarism_uniwise_files'] = 'Information about submissions sent to the UNIwise Originality service.';
+$string['privacy:metadata:plagiarism_uniwise_files:cm'] = 'The ID of the course module the submission belongs to.';
+$string['privacy:metadata:plagiarism_uniwise_files:errorresponse'] = 'The error returned by the service, if the submission failed.';
+$string['privacy:metadata:plagiarism_uniwise_files:externalid'] = 'The ID of the document in the UNIwise Originality service.';
+$string['privacy:metadata:plagiarism_uniwise_files:filename'] = 'The name of the submitted file.';
+$string['privacy:metadata:plagiarism_uniwise_files:identifier'] = 'The content hash of the submitted file.';
+$string['privacy:metadata:plagiarism_uniwise_files:reporturl'] = 'The link to the similarity report.';
+$string['privacy:metadata:plagiarism_uniwise_files:score'] = 'The similarity score of the submission.';
+$string['privacy:metadata:plagiarism_uniwise_files:status'] = 'The processing status of the submission.';
+$string['privacy:metadata:plagiarism_uniwise_files:timecreated'] = 'The time the submission was queued.';
+$string['privacy:metadata:plagiarism_uniwise_files:timemodified'] = 'The time the record was last updated.';
+$string['privacy:metadata:plagiarism_uniwise_files:userid'] = 'The ID of the user who made the submission.';
+$string['report_fetch_error'] = 'The plagiarism report could not be loaded. Please try again later.';
 $string['report_not_available'] = 'The plagiarism report is not yet available. Please try again later.';
 $string['reportsettings'] = 'Report visibility';
 $string['retry'] = 'Retry';
 $string['retryall'] = 'Retry all';
 $string['retryallqueued'] = 'All failed tasks have been re-queued for retry.';
 $string['retryqueued'] = 'Task has been re-queued for retry.';
-$string['savedconfigsuccess'] = 'Plagiarism Settings Saved';
+$string['savedconfigsuccess'] = 'Plagiarism settings saved';
 $string['searchbyidorfile'] = 'Search by ID, user ID, CM ID, or filename...';
 $string['similarity'] = 'Similarity: {$a}%';
 $string['status'] = 'Status: {$a}';
@@ -80,7 +97,7 @@ $string['status_delete_failed'] = 'Delete failed';
 $string['status_error'] = 'Error';
 $string['status_pending'] = 'Pending';
 $string['status_submitted'] = 'Submitted';
-$string['studentdisclosure'] = 'Student Disclosure';
+$string['studentdisclosure'] = 'Student disclosure';
 $string['studentdisclosure_help'] = 'This text will be displayed to all students on the file upload page.';
 $string['studentdisclosuredefault'] = 'All files uploaded will be submitted to a plagiarism detection service';
 $string['submit_on'] = 'Submit to Originality';
@@ -89,6 +106,8 @@ $string['submit_on_marking'] = 'On student marking';
 $string['submit_on_upload'] = 'On submission upload';
 $string['submittask'] = 'Submit files to plagiarism service';
 $string['timingsettings'] = 'Submission timing';
+$string['uniwise:manage'] = 'Manage the UNIwise Originality plagiarism plugin';
+$string['uniwise:viewreport'] = 'View plagiarism reports for other users';
 $string['unknownuser'] = 'Unknown user';
 $string['useoriginality'] = 'Enable originality';
 $string['viewreport'] = 'View full report';

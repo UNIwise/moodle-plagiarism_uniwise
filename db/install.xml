@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<XMLDB PATH="plagiarism/originality/db" VERSION="20260224"
-    COMMENT="XMLDB file for Moodle originality"
+<XMLDB PATH="plagiarism/uniwise/db" VERSION="20261009"
+    COMMENT="XMLDB file for Moodle plagiarism/uniwise"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
 <TABLES>
-    <TABLE NAME="plagiarism_originality_settings" COMMENT="Stores originality settings for modules">
+    <TABLE NAME="plagiarism_uniwise_settings" COMMENT="Stores originality settings for modules">
         <FIELDS>
             <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
             <FIELD NAME="cm" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" />
@@ -19,7 +19,7 @@
             <KEY NAME="cm" TYPE="foreign-unique" FIELDS="cm" REFTABLE="course_modules" REFFIELDS="id" />
         </KEYS>
     </TABLE>
-    <TABLE NAME="plagiarism_originality_files"
+    <TABLE NAME="plagiarism_uniwise_files"
         COMMENT="Table to store originality files sent to external plagiarism service">
         <FIELDS>
             <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />

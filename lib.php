@@ -17,8 +17,8 @@
 /**
  * lib.php - Contains Plagiarism plugin specific functions called by Modules.
  *
- * @package    plagiarism_originality
- * @copyright  2026 onwards
+ * @package    plagiarism_uniwise
+ * @copyright  2026 UNIwise
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -28,9 +28,9 @@ global $CFG;
 require_once($CFG->dirroot . '/plagiarism/lib.php');
 
 /**
- * Plagiarism plugin class for the Wiseflow Originality service.
+ * Plagiarism plugin class for the UNIwise Originality service.
  */
-class plagiarism_plugin_originality extends plagiarism_plugin {
+class plagiarism_plugin_uniwise extends plagiarism_plugin {
     /** @var array Static cache of search results keyed by cmid. */
     private static $searchcache = [];
     /**
@@ -47,7 +47,7 @@ class plagiarism_plugin_originality extends plagiarism_plugin {
         $output = '';
 
         // Check plugin is enabled for this activity.
-        $modsettings = $DB->get_record('plagiarism_originality_settings', ['cm' => $cmid]);
+        $modsettings = $DB->get_record('plagiarism_uniwise_settings', ['cm' => $cmid]);
         if (empty($modsettings) || empty($modsettings->enabled)) {
             return $output;
         }
@@ -64,7 +64,7 @@ class plagiarism_plugin_originality extends plagiarism_plugin {
             return $output;
         }
 
-        $filerecord = $DB->get_record('plagiarism_originality_files', [
+        $filerecord = $DB->get_record('plagiarism_uniwise_files', [
             'cm' => $cmid,
             'userid' => $userid,
             'identifier' => $identifier,
@@ -80,7 +80,7 @@ class plagiarism_plugin_originality extends plagiarism_plugin {
         if (!empty($filerecord->externalid)) {
             if (!isset(self::$searchcache[$cmid])) {
                 try {
-                    $client = \plagiarism_originality\api_client::create();
+                    $client = \plagiarism_uniwise\api_client::create();
                     $results = $client->search_documents('moodle_cm_id', (string) $cmid);
                     $indexed = [];
                     if (is_array($results)) {
@@ -133,32 +133,38 @@ class plagiarism_plugin_originality extends plagiarism_plugin {
                 }
             } else if ($apistatus === 'failed') {
                 $update->status = 3;
-                $update->errorresponse = $document['detail'] ?? 'External processing failed';
+                $update->errorresponse = $document['detail'] ?? get_string('externalprocessingfailed', 'plagiarism_uniwise');
             } else if ($apistatus === 'in_progress') {
                 $update->status = 1;
             }
-            $DB->update_record('plagiarism_originality_files', $update);
+            $DB->update_record('plagiarism_uniwise_files', $update);
 
             // Show report link and details only to users with view permission.
             if (static::can_user_view_report($cmid, $userid)) {
-                $reporturl = new moodle_url('/plagiarism/originality/report.php', ['id' => $filerecord->id]);
+                $statuskey = match ($apistatus) {
+                    'complete', 'available' => 'status_complete',
+                    'in_progress' => 'status_submitted',
+                    'failed' => 'status_error',
+                    default => 'status_pending',
+                };
+                $reporturl = new moodle_url('/plagiarism/uniwise/report.php', ['id' => $filerecord->id]);
                 $output .= html_writer::link(
                     $reporturl,
-                    get_string('viewreport', 'plagiarism_originality'),
-                    ['target' => '_blank', 'class' => 'plagiarism-originality-report']
+                    get_string('viewreport', 'plagiarism_uniwise'),
+                    ['target' => '_blank', 'class' => 'plagiarism-uniwise-report']
                 ) . html_writer::empty_tag('br');
 
                 $output .= html_writer::tag(
                     'span',
-                    get_string('status', 'plagiarism_originality', $apistatus),
-                    ['class' => 'plagiarism-originality-status']
+                    get_string('status', 'plagiarism_uniwise', get_string($statuskey, 'plagiarism_uniwise')),
+                    ['class' => 'plagiarism-uniwise-status']
                 ) . html_writer::empty_tag('br');
 
                 if ($score !== null) {
                     $output .= html_writer::tag(
                         'span',
-                        get_string('similarity', 'plagiarism_originality', $score),
-                        ['class' => 'plagiarism-originality-score']
+                        get_string('similarity', 'plagiarism_uniwise', $score),
+                        ['class' => 'plagiarism-uniwise-score']
                     );
                 }
             }
@@ -173,35 +179,35 @@ class plagiarism_plugin_originality extends plagiarism_plugin {
                 case 0: // Pending.
                     $output .= html_writer::tag(
                         'span',
-                        get_string('status_pending', 'plagiarism_originality'),
-                        ['class' => 'plagiarism-originality-pending']
+                        get_string('status_pending', 'plagiarism_uniwise'),
+                        ['class' => 'plagiarism-uniwise-pending']
                     );
                     break;
                 case 1: // Submitted.
                     $output .= html_writer::tag(
                         'span',
-                        get_string('status_submitted', 'plagiarism_originality'),
-                        ['class' => 'plagiarism-originality-submitted']
+                        get_string('status_submitted', 'plagiarism_uniwise'),
+                        ['class' => 'plagiarism-uniwise-submitted']
                     );
                     break;
                 case 2: // Complete.
                     $score = $filerecord->score ?? 0;
                     $output .= html_writer::tag(
                         'span',
-                        get_string('status_complete', 'plagiarism_originality'),
-                        ['class' => 'plagiarism-originality-complete']
+                        get_string('status_complete', 'plagiarism_uniwise'),
+                        ['class' => 'plagiarism-uniwise-complete']
                     );
                     $output .= ' ' . html_writer::tag(
                         'span',
-                        get_string('similarity', 'plagiarism_originality', $score),
-                        ['class' => 'plagiarism-originality-score']
+                        get_string('similarity', 'plagiarism_uniwise', $score),
+                        ['class' => 'plagiarism-uniwise-score']
                     );
                     break;
                 case 3: // Error.
                     $output .= html_writer::tag(
                         'span',
-                        get_string('status_error', 'plagiarism_originality'),
-                        ['class' => 'plagiarism-originality-error']
+                        get_string('status_error', 'plagiarism_uniwise'),
+                        ['class' => 'plagiarism-uniwise-error']
                     );
                     break;
             }
@@ -226,12 +232,12 @@ class plagiarism_plugin_originality extends plagiarism_plugin {
         $submiton = isset($data->originality_submit_on) ? (int) $data->originality_submit_on : 0;
         $indexdocuments = isset($data->originality_index_documents) ? (int) $data->originality_index_documents : 0;
 
-        if ($record = $DB->get_record('plagiarism_originality_settings', ['cm' => $cmid])) {
+        if ($record = $DB->get_record('plagiarism_uniwise_settings', ['cm' => $cmid])) {
             $record->enabled = $enabled;
             $record->student_report = $studentreport;
             $record->submit_on = $submiton;
             $record->index_documents = $indexdocuments;
-            $DB->update_record('plagiarism_originality_settings', $record);
+            $DB->update_record('plagiarism_uniwise_settings', $record);
         } else {
             $record = new stdClass();
             $record->cm = $cmid;
@@ -239,7 +245,7 @@ class plagiarism_plugin_originality extends plagiarism_plugin {
             $record->student_report = $studentreport;
             $record->submit_on = $submiton;
             $record->index_documents = $indexdocuments;
-            $DB->insert_record('plagiarism_originality_settings', $record);
+            $DB->insert_record('plagiarism_uniwise_settings', $record);
         }
     }
 
@@ -251,7 +257,7 @@ class plagiarism_plugin_originality extends plagiarism_plugin {
     public function get_form_elements_module($mform, $context, $modulename = '') {
         global $DB;
 
-        $plagiarismsettings = (array) get_config('plagiarism_originality');
+        $plagiarismsettings = (array) get_config('plagiarism_uniwise');
         if (empty($plagiarismsettings['originality_use'])) {
             return;
         }
@@ -263,27 +269,27 @@ class plagiarism_plugin_originality extends plagiarism_plugin {
 
         $cmid = optional_param('update', 0, PARAM_INT);
 
-        $mform->addElement('header', 'originalitydesc', get_string('pluginname', 'plagiarism_originality'));
-        $mform->addElement('checkbox', 'originality_enabled', get_string('originality_enable', 'plagiarism_originality'));
+        $mform->addElement('header', 'originalitydesc', get_string('pluginname', 'plagiarism_uniwise'));
+        $mform->addElement('checkbox', 'originality_enabled', get_string('originality_enable', 'plagiarism_uniwise'));
 
         // Only show student report option if it is enabled globally.
         if (!empty($plagiarismsettings['originality_student_report'])) {
             $mform->addElement(
                 'checkbox',
                 'originality_student_report',
-                get_string('allow_student_report_activity', 'plagiarism_originality')
+                get_string('allow_student_report_activity', 'plagiarism_uniwise')
             );
-            $mform->addHelpButton('originality_student_report', 'allow_student_report_activity', 'plagiarism_originality');
+            $mform->addHelpButton('originality_student_report', 'allow_student_report_activity', 'plagiarism_uniwise');
             $mform->disabledIf('originality_student_report', 'originality_enabled');
         }
 
         // Submission timing.
         $submitonoptions = [
-            0 => get_string('submit_on_upload', 'plagiarism_originality'),
-            1 => get_string('submit_on_marking', 'plagiarism_originality'),
+            0 => get_string('submit_on_upload', 'plagiarism_uniwise'),
+            1 => get_string('submit_on_marking', 'plagiarism_uniwise'),
         ];
-        $mform->addElement('select', 'originality_submit_on', get_string('submit_on', 'plagiarism_originality'), $submitonoptions);
-        $mform->addHelpButton('originality_submit_on', 'submit_on', 'plagiarism_originality');
+        $mform->addElement('select', 'originality_submit_on', get_string('submit_on', 'plagiarism_uniwise'), $submitonoptions);
+        $mform->addHelpButton('originality_submit_on', 'submit_on', 'plagiarism_uniwise');
         $mform->setDefault('originality_submit_on', (int) ($plagiarismsettings['originality_submit_on'] ?? 0));
         $mform->disabledIf('originality_submit_on', 'originality_enabled');
 
@@ -291,13 +297,13 @@ class plagiarism_plugin_originality extends plagiarism_plugin {
         $mform->addElement(
             'checkbox',
             'originality_index_documents',
-            get_string('index_documents', 'plagiarism_originality')
+            get_string('index_documents', 'plagiarism_uniwise')
         );
-        $mform->addHelpButton('originality_index_documents', 'index_documents', 'plagiarism_originality');
+        $mform->addHelpButton('originality_index_documents', 'index_documents', 'plagiarism_uniwise');
         $mform->setDefault('originality_index_documents', (int) ($plagiarismsettings['originality_index_documents'] ?? 0));
         $mform->disabledIf('originality_index_documents', 'originality_enabled');
 
-        if ($cmid && $record = $DB->get_record('plagiarism_originality_settings', ['cm' => $cmid])) {
+        if ($cmid && $record = $DB->get_record('plagiarism_uniwise_settings', ['cm' => $cmid])) {
             $mform->setDefault('originality_enabled', $record->enabled);
             if (isset($record->student_report)) {
                 $mform->setDefault('originality_student_report', $record->student_report);
@@ -319,13 +325,13 @@ class plagiarism_plugin_originality extends plagiarism_plugin {
     public function print_disclosure($cmid) {
         global $DB, $OUTPUT;
 
-        $plagiarismsettings = (array) get_config('plagiarism_originality');
+        $plagiarismsettings = (array) get_config('plagiarism_uniwise');
         if (empty($plagiarismsettings['originality_use'])) {
             return '';
         }
 
         // Check if originality is enabled for this specific activity.
-        $modsettings = $DB->get_record('plagiarism_originality_settings', ['cm' => $cmid]);
+        $modsettings = $DB->get_record('plagiarism_uniwise_settings', ['cm' => $cmid]);
         if (empty($modsettings) || empty($modsettings->enabled)) {
             return '';
         }
@@ -360,7 +366,7 @@ class plagiarism_plugin_originality extends plagiarism_plugin {
         }
 
         // Users with the viewreport capability (teachers/managers) always see reports.
-        if (has_capability('plagiarism/originality:viewreport', $context)) {
+        if (has_capability('plagiarism/uniwise:viewreport', $context)) {
             return true;
         }
 
@@ -369,12 +375,12 @@ class plagiarism_plugin_originality extends plagiarism_plugin {
             return false;
         }
 
-        $globalsettings = (array) get_config('plagiarism_originality');
+        $globalsettings = (array) get_config('plagiarism_uniwise');
         if (empty($globalsettings['originality_student_report'])) {
             return false;
         }
 
-        $modsettings = $DB->get_record('plagiarism_originality_settings', ['cm' => $cmid]);
+        $modsettings = $DB->get_record('plagiarism_uniwise_settings', ['cm' => $cmid]);
         if (empty($modsettings) || empty($modsettings->student_report)) {
             return false;
         }
@@ -403,7 +409,7 @@ class plagiarism_plugin_originality extends plagiarism_plugin {
         }
 
         if ($settings === null) {
-            $settings = (array) get_config('plagiarism_originality');
+            $settings = (array) get_config('plagiarism_uniwise');
         }
 
         $key = 'originality_mod_' . $modulename;
@@ -432,14 +438,14 @@ class plagiarism_plugin_originality extends plagiarism_plugin {
  * @param int $cmid The course module ID.
  * @param int $userid The user who submitted the file.
  */
-function plagiarism_originality_submit_file(\stored_file $file, int $cmid, int $userid): void {
+function plagiarism_uniwise_submit_file(\stored_file $file, int $cmid, int $userid): void {
     global $DB;
 
     $identifier = $file->get_contenthash();
     $now = time();
 
     // Avoid duplicate submissions.
-    $existing = $DB->get_record('plagiarism_originality_files', [
+    $existing = $DB->get_record('plagiarism_uniwise_files', [
         'cm' => $cmid,
         'userid' => $userid,
         'identifier' => $identifier,
@@ -462,13 +468,13 @@ function plagiarism_originality_submit_file(\stored_file $file, int $cmid, int $
     if (empty($existing)) {
         $record->timecreated = $now;
         $record->attempts = 0;
-        $record->id = $DB->insert_record('plagiarism_originality_files', $record);
+        $record->id = $DB->insert_record('plagiarism_uniwise_files', $record);
     } else {
-        $DB->update_record('plagiarism_originality_files', $record);
+        $DB->update_record('plagiarism_uniwise_files', $record);
     }
 
     // Queue an adhoc task to submit the file in the background with retry.
-    $task = new \plagiarism_originality\task\submit_to_originality();
+    $task = new \plagiarism_uniwise\task\submit_to_originality();
     $task->set_custom_data([
         'record_id' => $record->id,
         'attempt' => 1,
@@ -483,13 +489,13 @@ function plagiarism_originality_submit_file(\stored_file $file, int $cmid, int $
  * @param int $cmid The course module ID.
  * @param int $userid The user who submitted the content.
  */
-function plagiarism_originality_submit_text(string $content, int $cmid, int $userid): void {
+function plagiarism_uniwise_submit_text(string $content, int $cmid, int $userid): void {
     global $DB;
 
     $identifier = sha1($content);
     $now = time();
 
-    $existing = $DB->get_record('plagiarism_originality_files', [
+    $existing = $DB->get_record('plagiarism_uniwise_files', [
         'cm' => $cmid,
         'userid' => $userid,
         'identifier' => $identifier,
@@ -510,13 +516,13 @@ function plagiarism_originality_submit_text(string $content, int $cmid, int $use
     if (empty($existing)) {
         $record->timecreated = $now;
         $record->attempts = 0;
-        $record->id = $DB->insert_record('plagiarism_originality_files', $record);
+        $record->id = $DB->insert_record('plagiarism_uniwise_files', $record);
     } else {
-        $DB->update_record('plagiarism_originality_files', $record);
+        $DB->update_record('plagiarism_uniwise_files', $record);
     }
 
     // Queue an adhoc task to submit the text in the background with retry.
-    $task = new \plagiarism_originality\task\submit_to_originality();
+    $task = new \plagiarism_uniwise\task\submit_to_originality();
     $task->set_custom_data([
         'record_id' => $record->id,
         'attempt' => 1,
@@ -531,8 +537,8 @@ function plagiarism_originality_submit_text(string $content, int $cmid, int $use
  * @param moodleform_mod $formwrapper The form wrapper.
  * @param MoodleQuickForm $mform The form.
  */
-function plagiarism_originality_coursemodule_standard_elements($formwrapper, $mform) {
-    $plugin = new plagiarism_plugin_originality();
+function plagiarism_uniwise_coursemodule_standard_elements($formwrapper, $mform) {
+    $plugin = new plagiarism_plugin_uniwise();
     $context = $formwrapper->get_context();
     $plugin->get_form_elements_module($mform, $context, $formwrapper->get_current()->modulename ?? '');
 }
@@ -545,8 +551,8 @@ function plagiarism_originality_coursemodule_standard_elements($formwrapper, $mf
  * @param stdClass $course The course object.
  * @return stdClass The (possibly modified) data.
  */
-function plagiarism_originality_coursemodule_edit_post_actions($data, $course) {
-    $plugin = new plagiarism_plugin_originality();
+function plagiarism_uniwise_coursemodule_edit_post_actions($data, $course) {
+    $plugin = new plagiarism_plugin_uniwise();
     $plugin->save_form_elements($data);
     return $data;
 }
