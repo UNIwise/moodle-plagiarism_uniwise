@@ -217,11 +217,13 @@ class plagiarism_plugin_uniwise extends plagiarism_plugin {
     }
 
     /**
-     * Hook to save plagiarism specific settings on a module settings page.
+     * Save plagiarism specific settings from a module settings page.
+     *
+     * Not named save_form_elements() as Moodle 4.1 emits a deprecation notice when that is overridden.
      *
      * @param object $data Data from an mform submission.
      */
-    public function save_form_elements($data) {
+    public function save_activity_settings($data) {
         global $DB;
         if (!isset($data->coursemodule)) {
             return;
@@ -253,6 +255,7 @@ class plagiarism_plugin_uniwise extends plagiarism_plugin {
      * hook to add plagiarism specific settings to a module settings page
      * @param object $mform  - Moodle form
      * @param object $context - current context
+     * @param string $modulename - name of the module
      */
     public function get_form_elements_module($mform, $context, $modulename = '') {
         global $DB;
@@ -553,6 +556,6 @@ function plagiarism_uniwise_coursemodule_standard_elements($formwrapper, $mform)
  */
 function plagiarism_uniwise_coursemodule_edit_post_actions($data, $course) {
     $plugin = new plagiarism_plugin_uniwise();
-    $plugin->save_form_elements($data);
+    $plugin->save_activity_settings($data);
     return $data;
 }

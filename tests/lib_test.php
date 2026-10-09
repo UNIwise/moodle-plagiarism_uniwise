@@ -41,7 +41,7 @@ final class lib_test extends \advanced_testcase {
     /**
      * Helper: set or update the per-activity originality settings.
      *
-     * Uses the plugin's own save_form_elements() to avoid duplicate-key
+     * Uses the plugin's own save_activity_settings() to avoid duplicate-key
      * violations from the coursemodule_edit_post_actions callback.
      *
      * @param int $cmid Course module ID.
@@ -57,7 +57,7 @@ final class lib_test extends \advanced_testcase {
         $data->originality_submit_on = $submiton;
 
         $plugin = new \plagiarism_plugin_uniwise();
-        $plugin->save_form_elements($data);
+        $plugin->save_activity_settings($data);
     }
 
     // Tests for is_module_supported().
@@ -151,14 +151,14 @@ final class lib_test extends \advanced_testcase {
         }
     }
 
-    // Tests for save_form_elements().
+    // Tests for save_activity_settings().
 
     /**
-     * Test save_form_elements inserts a new record.
+     * Test save_activity_settings inserts a new record.
      *
-     * @covers \plagiarism_plugin_uniwise::save_form_elements
+     * @covers \plagiarism_plugin_uniwise::save_activity_settings
      */
-    public function test_save_form_elements_inserts_new_record(): void {
+    public function test_save_activity_settings_inserts_new_record(): void {
         global $DB;
         $this->resetAfterTest();
 
@@ -175,11 +175,11 @@ final class lib_test extends \advanced_testcase {
     }
 
     /**
-     * Test save_form_elements updates an existing record.
+     * Test save_activity_settings updates an existing record.
      *
-     * @covers \plagiarism_plugin_uniwise::save_form_elements
+     * @covers \plagiarism_plugin_uniwise::save_activity_settings
      */
-    public function test_save_form_elements_updates_existing_record(): void {
+    public function test_save_activity_settings_updates_existing_record(): void {
         global $DB;
         $this->resetAfterTest();
 
@@ -199,11 +199,11 @@ final class lib_test extends \advanced_testcase {
     }
 
     /**
-     * Test save_form_elements defaults unchecked checkboxes to 0.
+     * Test save_activity_settings defaults unchecked checkboxes to 0.
      *
-     * @covers \plagiarism_plugin_uniwise::save_form_elements
+     * @covers \plagiarism_plugin_uniwise::save_activity_settings
      */
-    public function test_save_form_elements_defaults_unchecked_checkboxes(): void {
+    public function test_save_activity_settings_defaults_unchecked_checkboxes(): void {
         global $DB;
         $this->resetAfterTest();
 
@@ -215,7 +215,7 @@ final class lib_test extends \advanced_testcase {
         $data->coursemodule = $assign->cmid;
 
         $plugin = new \plagiarism_plugin_uniwise();
-        $plugin->save_form_elements($data);
+        $plugin->save_activity_settings($data);
 
         $record = $DB->get_record('plagiarism_uniwise_settings', ['cm' => $assign->cmid]);
         $this->assertNotEmpty($record);
@@ -225,11 +225,11 @@ final class lib_test extends \advanced_testcase {
     }
 
     /**
-     * Test save_form_elements does nothing when no coursemodule is set.
+     * Test save_activity_settings does nothing when no coursemodule is set.
      *
-     * @covers \plagiarism_plugin_uniwise::save_form_elements
+     * @covers \plagiarism_plugin_uniwise::save_activity_settings
      */
-    public function test_save_form_elements_no_coursemodule_does_nothing(): void {
+    public function test_save_activity_settings_no_coursemodule_does_nothing(): void {
         global $DB;
         $this->resetAfterTest();
 
@@ -239,7 +239,7 @@ final class lib_test extends \advanced_testcase {
         $data->originality_enabled = 1;
 
         $plugin = new \plagiarism_plugin_uniwise();
-        $plugin->save_form_elements($data);
+        $plugin->save_activity_settings($data);
 
         $countafter = $DB->count_records('plagiarism_uniwise_settings');
         $this->assertEquals($countbefore, $countafter);

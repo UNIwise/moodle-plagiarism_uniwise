@@ -61,7 +61,7 @@ final class backup_restore_test extends \advanced_testcase {
             'originality_submit_on' => 1,
             'originality_index_documents' => 1,
         ];
-        (new \plagiarism_plugin_uniwise())->save_form_elements($data);
+        (new \plagiarism_plugin_uniwise())->save_activity_settings($data);
 
         $newcm = duplicate_module($course, $cm);
 

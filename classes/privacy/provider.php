@@ -32,9 +32,9 @@ use core_privacy\local\request\writer;
  * Privacy Subsystem implementation for plagiarism_uniwise.
  */
 class provider implements
-    \core_privacy\local\metadata\provider,
     \core_plagiarism\privacy\plagiarism_provider,
-    \core_plagiarism\privacy\plagiarism_user_provider {
+    \core_plagiarism\privacy\plagiarism_user_provider,
+    \core_privacy\local\metadata\provider {
     /**
      * Describe the personal data stored locally and sent to the external service.
      *

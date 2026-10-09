@@ -53,6 +53,11 @@ final class observer_test extends \advanced_testcase {
 
     /**
      * Helper: set or update the per-activity originality settings.
+     *
+     * @param int $cmid Course module ID.
+     * @param int $enabled Whether originality is enabled.
+     * @param int $studentreport Whether students can view reports.
+     * @param int $submiton 0 = on upload, 1 = on marking.
      */
     private function set_activity_settings(int $cmid, int $enabled = 1, int $studentreport = 0, int $submiton = 0): void {
         $data = new \stdClass();
@@ -62,7 +67,7 @@ final class observer_test extends \advanced_testcase {
         $data->originality_submit_on = $submiton;
 
         $plugin = new \plagiarism_plugin_uniwise();
-        $plugin->save_form_elements($data);
+        $plugin->save_activity_settings($data);
     }
 
     /**

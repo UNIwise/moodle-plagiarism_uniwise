@@ -62,6 +62,8 @@ final class provider_test extends \core_privacy\tests\provider_testcase {
 
     /**
      * Metadata declares the local table and the external location.
+     *
+     * @covers \plagiarism_uniwise\privacy\provider::get_metadata
      */
     public function test_get_metadata(): void {
         $items = provider::get_metadata(new collection('plagiarism_uniwise'))->get_collection();
@@ -73,6 +75,8 @@ final class provider_test extends \core_privacy\tests\provider_testcase {
 
     /**
      * User data is exported for the module context.
+     *
+     * @covers \plagiarism_uniwise\privacy\provider::export_plagiarism_user_data
      */
     public function test_export_plagiarism_user_data(): void {
         $this->resetAfterTest();
@@ -94,6 +98,8 @@ final class provider_test extends \core_privacy\tests\provider_testcase {
 
     /**
      * Deleting for a context removes all records and queues external deletion.
+     *
+     * @covers \plagiarism_uniwise\privacy\provider::delete_plagiarism_for_context
      */
     public function test_delete_plagiarism_for_context(): void {
         global $DB;
@@ -119,6 +125,8 @@ final class provider_test extends \core_privacy\tests\provider_testcase {
 
     /**
      * Deleting for a user only removes that user's records.
+     *
+     * @covers \plagiarism_uniwise\privacy\provider::delete_plagiarism_for_user
      */
     public function test_delete_plagiarism_for_user(): void {
         global $DB;
@@ -139,6 +147,8 @@ final class provider_test extends \core_privacy\tests\provider_testcase {
 
     /**
      * Deleting for a list of users only removes those users' records.
+     *
+     * @covers \plagiarism_uniwise\privacy\provider::delete_plagiarism_for_users
      */
     public function test_delete_plagiarism_for_users(): void {
         global $DB;
