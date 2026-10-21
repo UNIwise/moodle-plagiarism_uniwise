@@ -25,12 +25,6 @@
 defined('MOODLE_INTERNAL') || die();
 
 $capabilities = [
-    // Whether the user can manage.
-    'plagiarism/uniwise:manage' => [
-        'captype' => 'write',
-        'contextlevel' => CONTEXT_SYSTEM,
-        'archetypes' => [],
-    ],
     // Whether the user can view other users' plagiarism reports.
     'plagiarism/uniwise:viewreport' => [
         'captype' => 'read',

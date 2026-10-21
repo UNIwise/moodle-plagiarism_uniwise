@@ -42,9 +42,13 @@ class plagiarism_plugin_uniwise extends plagiarism_plugin {
     public function get_links($linkarray) {
         global $DB;
 
-        $cmid = $linkarray['cmid'];
-        $userid = $linkarray['userid'];
+        $cmid = static::get_cmid_from_linkarray($linkarray);
+        $userid = (int) ($linkarray['userid'] ?? 0);
         $output = '';
+
+        if (empty($cmid) || empty($userid)) {
+            return $output;
+        }
 
         // Check plugin is enabled for this activity.
         $modsettings = $DB->get_record('plagiarism_uniwise_settings', ['cm' => $cmid]);
@@ -219,7 +223,7 @@ class plagiarism_plugin_uniwise extends plagiarism_plugin {
     /**
      * Save plagiarism specific settings from a module settings page.
      *
-     * Not named save_form_elements() as Moodle 4.1 emits a deprecation notice when that is overridden.
+     * Not named save_form_elements() as Moodle emits a deprecation notice when that is overridden.
      *
      * @param object $data Data from an mform submission.
      */
@@ -286,15 +290,22 @@ class plagiarism_plugin_uniwise extends plagiarism_plugin {
             $mform->disabledIf('originality_student_report', 'originality_enabled');
         }
 
-        // Submission timing.
-        $submitonoptions = [
-            0 => get_string('submit_on_upload', 'plagiarism_uniwise'),
-            1 => get_string('submit_on_marking', 'plagiarism_uniwise'),
-        ];
-        $mform->addElement('select', 'originality_submit_on', get_string('submit_on', 'plagiarism_uniwise'), $submitonoptions);
-        $mform->addHelpButton('originality_submit_on', 'submit_on', 'plagiarism_uniwise');
-        $mform->setDefault('originality_submit_on', (int) ($plagiarismsettings['originality_submit_on'] ?? 0));
-        $mform->disabledIf('originality_submit_on', 'originality_enabled');
+        // Submission timing (only assignments can defer submission until marking).
+        if (preg_replace('/^mod_/', '', $modulename) === 'assign') {
+            $submitonoptions = [
+                0 => get_string('submit_on_upload', 'plagiarism_uniwise'),
+                1 => get_string('submit_on_marking', 'plagiarism_uniwise'),
+            ];
+            $mform->addElement(
+                'select',
+                'originality_submit_on',
+                get_string('submit_on', 'plagiarism_uniwise'),
+                $submitonoptions
+            );
+            $mform->addHelpButton('originality_submit_on', 'submit_on', 'plagiarism_uniwise');
+            $mform->setDefault('originality_submit_on', (int) ($plagiarismsettings['originality_submit_on'] ?? 0));
+            $mform->disabledIf('originality_submit_on', 'originality_enabled');
+        }
 
         // Indexing (defaults to the global plugin setting, can be overridden per activity).
         $mform->addElement(
@@ -394,7 +405,7 @@ class plagiarism_plugin_uniwise extends plagiarism_plugin {
     /**
      * List of activity modules that support plagiarism checking.
      */
-    const SUPPORTED_MODULES = ['assign', 'forum', 'workshop', 'quiz'];
+    public const SUPPORTED_MODULES = ['assign', 'forum', 'workshop', 'quiz'];
 
     /**
      * Check if a module type is supported and enabled in global settings.
@@ -417,6 +428,31 @@ class plagiarism_plugin_uniwise extends plagiarism_plugin {
 
         $key = 'originality_mod_' . $modulename;
         return !empty($settings[$key]);
+    }
+
+    /**
+     * Get the course module ID from a plagiarism_get_links() link array.
+     *
+     * Most activities pass 'cmid', but the essay question renderer only passes 'context' (a context ID).
+     *
+     * @param array $linkarray The link array.
+     * @return int Course module ID, or 0 if it cannot be determined.
+     */
+    public static function get_cmid_from_linkarray(array $linkarray): int {
+        if (!empty($linkarray['cmid'])) {
+            return (int) $linkarray['cmid'];
+        }
+        if (empty($linkarray['context'])) {
+            return 0;
+        }
+
+        $context = $linkarray['context'] instanceof \context
+            ? $linkarray['context']
+            : \context::instance_by_id((int) $linkarray['context'], IGNORE_MISSING);
+        if (!$context || $context->contextlevel != CONTEXT_MODULE) {
+            return 0;
+        }
+        return (int) $context->instanceid;
     }
 
     /**
@@ -527,6 +563,21 @@ function plagiarism_uniwise_submit_text(string $content, int $cmid, int $userid)
     // Queue an adhoc task to submit the text in the background with retry.
     $task = new \plagiarism_uniwise\task\submit_to_originality();
     $task->set_custom_data([
+        'record_id' => $record->id,
+        'attempt' => 1,
+    ]);
+    \core\task\manager::queue_adhoc_task($task);
+}
+
+/**
+ * Queue deletion of a document from the external service; the local record is removed once it succeeds.
+ *
+ * @param \stdClass $record The plagiarism_uniwise_files record (needs id and externalid).
+ */
+function plagiarism_uniwise_queue_delete(\stdClass $record): void {
+    $task = new \plagiarism_uniwise\task\delete_from_originality();
+    $task->set_custom_data([
+        'external_id' => $record->externalid ?? '',
         'record_id' => $record->id,
         'attempt' => 1,
     ]);

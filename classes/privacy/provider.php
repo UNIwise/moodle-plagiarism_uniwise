@@ -47,6 +47,7 @@ class provider implements
             'userid' => 'privacy:metadata:plagiarism_uniwise_files:userid',
             'identifier' => 'privacy:metadata:plagiarism_uniwise_files:identifier',
             'filename' => 'privacy:metadata:plagiarism_uniwise_files:filename',
+            'submissiontype' => 'privacy:metadata:plagiarism_uniwise_files:submissiontype',
             'externalid' => 'privacy:metadata:plagiarism_uniwise_files:externalid',
             'reporturl' => 'privacy:metadata:plagiarism_uniwise_files:reporturl',
             'score' => 'privacy:metadata:plagiarism_uniwise_files:score',

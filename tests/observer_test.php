@@ -32,6 +32,9 @@ defined('MOODLE_INTERNAL') || die();
 global $CFG;
 require_once($CFG->dirroot . '/plagiarism/uniwise/lib.php');
 require_once($CFG->dirroot . '/mod/assign/locallib.php');
+require_once($CFG->dirroot . '/mod/forum/lib.php');
+require_once($CFG->dirroot . '/mod/quiz/locallib.php');
+require_once($CFG->dirroot . '/course/lib.php');
 
 /**
  * Tests for the observer class.
@@ -363,5 +366,252 @@ final class observer_test extends \advanced_testcase {
             'classname' => '\\plagiarism_uniwise\\task\\delete_from_originality',
         ]);
         $this->assertEmpty($tasks);
+    }
+
+    // Forum, workshop and quiz.
+
+    /**
+     * Test a forum post edited by a teacher is recorded for the post author, regardless of submission timing.
+     *
+     * @covers \plagiarism_uniwise\observer::assessable_uploaded
+     */
+    public function test_forum_post_recorded_for_author(): void {
+        global $DB;
+        $this->resetAfterTest();
+
+        $this->enable_plugin();
+        set_config('originality_mod_forum', 1, 'plagiarism_uniwise');
+
+        $course = $this->getDataGenerator()->create_course();
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'editingteacher');
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        $forum = $this->getDataGenerator()->create_module('forum', ['course' => $course->id]);
+
+        // Submit on marking only applies to assignments, so the post is still sent.
+        $this->set_activity_settings($forum->cmid, 1, 0, 1);
+
+        $discussion = $this->getDataGenerator()->get_plugin_generator('mod_forum')->create_discussion([
+            'course' => $course->id,
+            'forum' => $forum->id,
+            'userid' => $student->id,
+            'message' => 'Student forum post',
+        ]);
+        $post = $DB->get_record('forum_posts', ['id' => $discussion->firstpost]);
+
+        $this->setUser($teacher);
+        forum_trigger_content_uploaded_event($post, get_coursemodule_from_id('forum', $forum->cmid), 'test');
+
+        $record = $DB->get_record('plagiarism_uniwise_files', ['cm' => $forum->cmid], '*', MUST_EXIST);
+        $this->assertEquals($student->id, $record->userid);
+        $this->assertEquals('onlinetext', $record->submissiontype);
+        $this->assertEquals(sha1('Student forum post'), $record->identifier);
+    }
+
+    /**
+     * Test a workshop submission is recorded for its author.
+     *
+     * @covers \plagiarism_uniwise\observer::assessable_uploaded
+     */
+    public function test_workshop_submission_recorded_for_author(): void {
+        global $DB;
+        $this->resetAfterTest();
+
+        $this->enable_plugin();
+        set_config('originality_mod_workshop', 1, 'plagiarism_uniwise');
+
+        $course = $this->getDataGenerator()->create_course();
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        $this->setAdminUser();
+        $workshop = $this->getDataGenerator()->create_module('workshop', ['course' => $course->id]);
+        $this->set_activity_settings($workshop->cmid, 1, 0, 0);
+
+        $submissionid = $this->getDataGenerator()->get_plugin_generator('mod_workshop')->create_submission(
+            $workshop->id,
+            $student->id,
+            ['content' => 'Student workshop submission']
+        );
+
+        $event = \mod_workshop\event\assessable_uploaded::create([
+            'context' => \context_module::instance($workshop->cmid),
+            'objectid' => $submissionid,
+            'other' => [
+                'content' => 'Student workshop submission',
+                'pathnamehashes' => [],
+            ],
+        ]);
+        $event->trigger();
+
+        $record = $DB->get_record('plagiarism_uniwise_files', ['cm' => $workshop->cmid], '*', MUST_EXIST);
+        $this->assertEquals($student->id, $record->userid);
+        $this->assertEquals(sha1('Student workshop submission'), $record->identifier);
+    }
+
+    /**
+     * Test submitting a quiz attempt records the essay answer, identified by its response summary.
+     *
+     * @covers \plagiarism_uniwise\observer::attempt_submitted
+     */
+    public function test_quiz_attempt_submitted_records_essay(): void {
+        global $DB;
+        $this->resetAfterTest();
+
+        $this->enable_plugin();
+        set_config('originality_mod_quiz', 1, 'plagiarism_uniwise');
+
+        $course = $this->getDataGenerator()->create_course();
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+
+        $quizgenerator = $this->getDataGenerator()->get_plugin_generator('mod_quiz');
+        $quiz = $quizgenerator->create_instance(['course' => $course->id, 'questionsperpage' => 0, 'sumgrades' => 2]);
+        $questiongenerator = $this->getDataGenerator()->get_plugin_generator('core_question');
+        $category = $questiongenerator->create_question_category();
+        $essay = $questiongenerator->create_question('essay', 'plain', ['category' => $category->id]);
+        $shortanswer = $questiongenerator->create_question('shortanswer', null, ['category' => $category->id]);
+        quiz_add_quiz_question($essay->id, $quiz);
+        quiz_add_quiz_question($shortanswer->id, $quiz);
+
+        $this->set_activity_settings($quiz->cmid, 1, 0, 0);
+
+        $this->setUser($student);
+        $attempt = $quizgenerator->create_attempt($quiz->id, $student->id);
+        $quizgenerator->submit_responses($attempt->id, [1 => 'My essay answer', 2 => 'frog'], false, true);
+
+        $summary = \mod_quiz\quiz_attempt::create($attempt->id)->get_question_attempt(1)->get_response_summary();
+
+        // Only the essay is recorded.
+        $records = $DB->get_records('plagiarism_uniwise_files', ['cm' => $quiz->cmid]);
+        $this->assertCount(1, $records);
+        $record = reset($records);
+        $this->assertEquals($student->id, $record->userid);
+        $this->assertEquals('onlinetext', $record->submissiontype);
+        $this->assertEquals(sha1($summary), $record->identifier);
+    }
+
+    /**
+     * Test quiz attempts are ignored when quizzes are not enabled globally.
+     *
+     * @covers \plagiarism_uniwise\observer::attempt_submitted
+     */
+    public function test_quiz_attempt_ignored_when_quiz_unsupported(): void {
+        global $DB;
+        $this->resetAfterTest();
+
+        $this->enable_plugin();
+
+        $course = $this->getDataGenerator()->create_course();
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+
+        $quizgenerator = $this->getDataGenerator()->get_plugin_generator('mod_quiz');
+        $quiz = $quizgenerator->create_instance(['course' => $course->id, 'sumgrades' => 1]);
+        $questiongenerator = $this->getDataGenerator()->get_plugin_generator('core_question');
+        $category = $questiongenerator->create_question_category();
+        $essay = $questiongenerator->create_question('essay', 'plain', ['category' => $category->id]);
+        quiz_add_quiz_question($essay->id, $quiz);
+
+        $this->set_activity_settings($quiz->cmid, 1, 0, 0);
+
+        $this->setUser($student);
+        $attempt = $quizgenerator->create_attempt($quiz->id, $student->id);
+        $quizgenerator->submit_responses($attempt->id, [1 => 'My essay answer'], false, true);
+
+        $this->assertEquals(0, $DB->count_records('plagiarism_uniwise_files'));
+    }
+
+    // Activity and course deletion.
+
+    /**
+     * Helper: insert a submitted file record.
+     *
+     * @param int $cmid Course module ID.
+     * @param int $userid User ID.
+     * @param string $externalid External document ID.
+     * @return int The record ID.
+     */
+    private function insert_submitted_record(int $cmid, int $userid, string $externalid): int {
+        global $DB;
+
+        return $DB->insert_record('plagiarism_uniwise_files', (object) [
+            'cm' => $cmid,
+            'userid' => $userid,
+            'identifier' => sha1($externalid),
+            'filename' => 'test.txt',
+            'submissiontype' => 'file',
+            'externalid' => $externalid,
+            'status' => 2,
+            'attempts' => 1,
+            'timecreated' => time(),
+            'timemodified' => time(),
+        ]);
+    }
+
+    /**
+     * Test deleting an activity removes its settings and queues deletion of its documents.
+     *
+     * @covers \plagiarism_uniwise\observer::course_module_deleted
+     */
+    public function test_course_module_deleted_cleans_up(): void {
+        global $DB;
+        $this->resetAfterTest();
+
+        $this->enable_plugin();
+        set_config('coursebinenable', 0, 'tool_recyclebin');
+
+        $course = $this->getDataGenerator()->create_course();
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
+        $other = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
+
+        $this->set_activity_settings($assign->cmid, 1, 0, 0);
+        $this->set_activity_settings($other->cmid, 1, 0, 0);
+        $recordid = $this->insert_submitted_record($assign->cmid, $student->id, 'ext-deleted');
+        $this->insert_submitted_record($other->cmid, $student->id, 'ext-kept');
+
+        course_delete_module($assign->cmid);
+
+        $this->assertFalse($DB->record_exists('plagiarism_uniwise_settings', ['cm' => $assign->cmid]));
+        $this->assertTrue($DB->record_exists('plagiarism_uniwise_settings', ['cm' => $other->cmid]));
+
+        $tasks = $DB->get_records('task_adhoc', [
+            'classname' => '\\plagiarism_uniwise\\task\\delete_from_originality',
+        ]);
+        $this->assertCount(1, $tasks);
+        $data = json_decode(reset($tasks)->customdata);
+        $this->assertEquals('ext-deleted', $data->external_id);
+        $this->assertEquals($recordid, $data->record_id);
+    }
+
+    /**
+     * Test deleting a course cleans up the settings and documents of its activities.
+     *
+     * @covers \plagiarism_uniwise\observer::course_content_deleted
+     */
+    public function test_course_deleted_cleans_up(): void {
+        global $DB;
+        $this->resetAfterTest();
+
+        $this->enable_plugin();
+        set_config('categorybinenable', 0, 'tool_recyclebin');
+
+        $course = $this->getDataGenerator()->create_course();
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
+        $this->set_activity_settings($assign->cmid, 1, 0, 0);
+        $this->insert_submitted_record($assign->cmid, $student->id, 'ext-course');
+
+        $othercourse = $this->getDataGenerator()->create_course();
+        $other = $this->getDataGenerator()->create_module('assign', ['course' => $othercourse->id]);
+        $this->set_activity_settings($other->cmid, 1, 0, 0);
+        $this->insert_submitted_record($other->cmid, $student->id, 'ext-other');
+
+        delete_course($course, false);
+
+        $this->assertFalse($DB->record_exists('plagiarism_uniwise_settings', ['cm' => $assign->cmid]));
+        $this->assertTrue($DB->record_exists('plagiarism_uniwise_settings', ['cm' => $other->cmid]));
+
+        $tasks = $DB->get_records('task_adhoc', [
+            'classname' => '\\plagiarism_uniwise\\task\\delete_from_originality',
+        ]);
+        $this->assertCount(1, $tasks);
+        $this->assertEquals('ext-course', json_decode(reset($tasks)->customdata)->external_id);
     }
 }

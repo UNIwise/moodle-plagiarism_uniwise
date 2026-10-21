@@ -521,6 +521,72 @@ final class lib_test extends \advanced_testcase {
         $this->assertStringContainsString('45%', $output);
     }
 
+    /**
+     * Test get_links resolves the course module from a context ID, as passed by the essay question renderer.
+     *
+     * @covers \plagiarism_plugin_uniwise::get_links
+     * @covers \plagiarism_plugin_uniwise::get_cmid_from_linkarray
+     */
+    public function test_get_links_resolves_cmid_from_context(): void {
+        global $DB;
+        $this->resetAfterTest();
+
+        $course = $this->getDataGenerator()->create_course();
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'editingteacher');
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        $quiz = $this->getDataGenerator()->create_module('quiz', ['course' => $course->id]);
+
+        $this->set_activity_settings($quiz->cmid, 1, 0, 0);
+
+        $content = 'Essay response summary';
+        $DB->insert_record('plagiarism_uniwise_files', (object) [
+            'cm' => $quiz->cmid,
+            'userid' => $student->id,
+            'identifier' => sha1($content),
+            'filename' => 'onlinetext',
+            'submissiontype' => 'onlinetext',
+            'status' => 2,
+            'score' => 12,
+            'attempts' => 1,
+            'timecreated' => time(),
+            'timemodified' => time(),
+        ]);
+
+        $this->setUser($teacher);
+
+        $plugin = new \plagiarism_plugin_uniwise();
+        $output = $plugin->get_links([
+            'context' => \context_module::instance($quiz->cmid)->id,
+            'component' => 'qtype_essay',
+            'area' => 1,
+            'itemid' => 1,
+            'userid' => $student->id,
+            'content' => $content,
+        ]);
+
+        $this->assertStringContainsString('12%', $output);
+    }
+
+    /**
+     * Test get_links returns empty for a link array without a module context, such as a question preview.
+     *
+     * @covers \plagiarism_plugin_uniwise::get_links
+     * @covers \plagiarism_plugin_uniwise::get_cmid_from_linkarray
+     */
+    public function test_get_links_returns_empty_without_module_context(): void {
+        $this->resetAfterTest();
+
+        $course = $this->getDataGenerator()->create_course();
+
+        $plugin = new \plagiarism_plugin_uniwise();
+        $this->assertSame('', $plugin->get_links([
+            'context' => \context_course::instance($course->id)->id,
+            'userid' => 2,
+            'content' => 'Preview',
+        ]));
+        $this->assertSame('', $plugin->get_links(['userid' => 2, 'content' => 'No context']));
+    }
+
     // Tests for print_disclosure().
 
     /**

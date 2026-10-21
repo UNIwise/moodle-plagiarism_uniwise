@@ -41,4 +41,16 @@ $observers = [
         'eventname' => '\mod_assign\event\submission_graded',
         'callback'  => '\plagiarism_uniwise\observer::submission_graded',
     ],
+    [
+        'eventname' => '\mod_quiz\event\attempt_submitted',
+        'callback'  => '\plagiarism_uniwise\observer::attempt_submitted',
+    ],
+    [
+        'eventname' => '\core\event\course_module_deleted',
+        'callback'  => '\plagiarism_uniwise\observer::course_module_deleted',
+    ],
+    [
+        'eventname' => '\core\event\course_content_deleted',
+        'callback'  => '\plagiarism_uniwise\observer::course_content_deleted',
+    ],
 ];

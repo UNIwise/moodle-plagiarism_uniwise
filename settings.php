@@ -33,7 +33,7 @@ admin_externalpage_setup('plagiarismuniwise');
 $context = context_system::instance();
 require_capability('moodle/site:config', $context);
 
-$mform = new plagiarism_setup_form();
+$mform = new plagiarism_uniwise_setup_form();
 $plagiarismplugin = new plagiarism_plugin_uniwise();
 $settingspage = new moodle_url('/plagiarism/uniwise/settings.php');
 
