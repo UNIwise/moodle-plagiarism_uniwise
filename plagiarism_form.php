@@ -29,7 +29,7 @@ require_once($CFG->dirroot . '/lib/formslib.php');
 /**
  * Settings form for plagiarism_uniwise.
  */
-class plagiarism_setup_form extends moodleform {
+class plagiarism_uniwise_setup_form extends moodleform {
     /**
      * Define the form elements.
      */

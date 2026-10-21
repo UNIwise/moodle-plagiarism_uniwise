@@ -12,8 +12,8 @@ administrator.
 
 ## Requirements
 
-- Moodle 4.1 or later
-- PHP 8.0 or later
+- Moodle 4.5 or later
+- PHP 8.1 or later
 - UNIwise Originality API credentials (endpoint URL, OAuth2 client ID and secret)
 - Outbound HTTPS access from the Moodle server to the API endpoint. Requests use
   Moodle's HTTP client, so the site's proxy settings and
@@ -22,16 +22,23 @@ administrator.
 
 ## Features
 
-- Automatic submission of student files and online text to the Originality
-  service via background processing (adhoc tasks with exponential backoff retry).
-- Inline display of similarity scores and report links on grading pages.
+- Automatic submission of student work to the Originality service via
+  background processing (adhoc tasks with exponential backoff retry):
+  - Assignments: online text and file submissions.
+  - Forums: post text and attachments.
+  - Workshops: submission text and attachments.
+  - Quizzes: essay question answers and attachments, when the attempt is
+    submitted.
+- Inline display of similarity scores and report links on grading pages, forum
+  posts, workshop submissions and quiz essay reviews.
 - Per-activity configuration: enable or disable plagiarism checking on
   individual assignments, forums, workshops, and quizzes.
-- Configurable submission timing: submit on upload or defer until marking.
+- Configurable submission timing for assignments: submit on upload or defer
+  until marking.
 - Student report visibility controls at both global and per-activity level.
 - Admin page for monitoring and retrying failed submissions and deletions.
-- Automatic cleanup: when a submission is removed, the corresponding document
-  is deleted from the external service.
+- Automatic cleanup: when an assignment submission, an activity or a course is
+  deleted, the corresponding documents are deleted from the external service.
 
 ## Installation
 
@@ -72,8 +79,8 @@ activities:
 1. Edit an activity (e.g. an Assignment) and expand the
    "UNIwise Originality plagiarism plugin" section.
 2. Check "Enable Originality for this activity".
-3. Optionally allow students to view their own reports and choose whether
-   submissions are sent on upload or on marking.
+3. Optionally allow students to view their own reports and, for assignments,
+   choose whether submissions are sent on upload or on marking.
 4. Save the activity. Student submissions will now be sent to the Originality
    service automatically according to the chosen timing.
 
@@ -103,7 +110,6 @@ Site administration > Server > Scheduled tasks.
 | Capability | Description |
 | --- | --- |
 | `plagiarism/uniwise:viewreport` | View plagiarism reports for other users' submissions. Granted by default to editing teachers and managers. |
-| `plagiarism/uniwise:manage` | Manage the plagiarism plugin settings. |
 
 ## Privacy
 

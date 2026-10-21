@@ -17,8 +17,9 @@
 /**
  * Event observer for plagiarism_uniwise.
  *
- * Listens for assessable_uploaded and assessable_submitted events to
- * automatically send files to the external plagiarism service.
+ * Listens for assessable_uploaded, assessable_submitted and quiz attempt_submitted
+ * events to automatically send files to the external plagiarism service, and for
+ * deletion events to clean up.
  *
  * @package    plagiarism_uniwise
  * @copyright  2026 UNIwise
@@ -61,13 +62,13 @@ class observer {
             return;
         }
 
-        // Skip if configured to submit on marking instead of upload.
-        if (!empty($modsettings->submit_on)) {
+        // Skip if configured to submit on marking instead of upload (assignments only).
+        if ($cm->modname === 'assign' && !empty($modsettings->submit_on)) {
             return;
         }
 
         $eventdata = $event->get_data();
-        $userid = $eventdata['userid'];
+        $userid = self::get_author_id($cm->modname, (int) $event->objectid, (int) $eventdata['userid']);
 
         // Get the files and content from the event.
         $other = $eventdata['other'] ?? [];
@@ -122,8 +123,8 @@ class observer {
             return;
         }
 
-        // Skip if configured to submit on marking instead of upload.
-        if (!empty($modsettings->submit_on)) {
+        // Skip if configured to submit on marking instead of upload (assignments only).
+        if ($cm->modname === 'assign' && !empty($modsettings->submit_on)) {
             return;
         }
 
@@ -186,15 +187,136 @@ class observer {
         }
 
         foreach ($records as $record) {
-            // Queue an adhoc task to delete from external service with retry.
-            $task = new \plagiarism_uniwise\task\delete_from_originality();
-            $task->set_custom_data([
-                'external_id' => $record->externalid ?? '',
-                'record_id'   => $record->id,
-                'attempt'     => 1,
-            ]);
-            \core\task\manager::queue_adhoc_task($task);
+            plagiarism_uniwise_queue_delete($record);
         }
+    }
+
+    /**
+     * Handle the quiz attempt_submitted event.
+     *
+     * Quizzes do not trigger assessable events, so essay answers and attachments
+     * are collected from the submitted attempt.
+     *
+     * @param \mod_quiz\event\attempt_submitted $event
+     */
+    public static function attempt_submitted(\mod_quiz\event\attempt_submitted $event): void {
+        global $DB, $CFG;
+
+        require_once($CFG->dirroot . '/plagiarism/uniwise/lib.php');
+        require_once($CFG->dirroot . '/question/engine/lib.php');
+
+        $config = get_config('plagiarism_uniwise');
+        if (empty($config->originality_use)) {
+            return;
+        }
+
+        $cmid = $event->contextinstanceid;
+
+        if (!\plagiarism_plugin_uniwise::is_module_supported('quiz')) {
+            return;
+        }
+
+        $modsettings = $DB->get_record('plagiarism_uniwise_settings', ['cm' => $cmid]);
+        if (empty($modsettings) || empty($modsettings->enabled)) {
+            return;
+        }
+
+        $attempt = $DB->get_record('quiz_attempts', ['id' => $event->objectid], 'id, uniqueid, userid, preview');
+        if (!$attempt || !empty($attempt->preview)) {
+            return;
+        }
+        $userid = (int) $attempt->userid;
+        $context = \context_module::instance($cmid);
+
+        $quba = \question_engine::load_questions_usage_by_activity($attempt->uniqueid);
+        foreach ($quba->get_slots() as $slot) {
+            $qa = $quba->get_question_attempt($slot);
+            if ($qa->get_question()->get_type_name() !== 'essay') {
+                continue;
+            }
+
+            // The essay renderer links reports by the response summary, so that identifies the text.
+            if (onlinetext_finder::essay_answer_text($qa) !== '') {
+                plagiarism_uniwise_submit_text((string) $qa->get_response_summary(), $cmid, $userid);
+            }
+
+            foreach ($qa->get_last_qt_files('attachments', $context->id) as $file) {
+                if (!$file->is_directory()) {
+                    plagiarism_uniwise_submit_file($file, $cmid, $userid);
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle the course_module_deleted event.
+     *
+     * Removes the activity settings and deletes the activity's documents from the external service.
+     *
+     * @param \core\event\course_module_deleted $event
+     */
+    public static function course_module_deleted(\core\event\course_module_deleted $event): void {
+        global $DB, $CFG;
+
+        require_once($CFG->dirroot . '/plagiarism/uniwise/lib.php');
+
+        $cmid = (int) $event->objectid;
+        $DB->delete_records('plagiarism_uniwise_settings', ['cm' => $cmid]);
+
+        $records = $DB->get_records('plagiarism_uniwise_files', ['cm' => $cmid], '', 'id, externalid');
+        foreach ($records as $record) {
+            plagiarism_uniwise_queue_delete($record);
+        }
+    }
+
+    /**
+     * Handle the course_content_deleted event.
+     *
+     * Deleting a course removes its modules without triggering course_module_deleted,
+     * so clean up any settings and documents whose course module no longer exists.
+     *
+     * @param \core\event\course_content_deleted $event
+     */
+    public static function course_content_deleted(\core\event\course_content_deleted $event): void {
+        global $DB, $CFG;
+
+        require_once($CFG->dirroot . '/plagiarism/uniwise/lib.php');
+
+        $DB->delete_records_select('plagiarism_uniwise_settings', 'cm NOT IN (SELECT id FROM {course_modules})');
+
+        // Failed deletions are left for the admin to retry from the failed tasks page.
+        $records = $DB->get_records_sql(
+            "SELECT f.id, f.externalid
+               FROM {plagiarism_uniwise_files} f
+          LEFT JOIN {course_modules} cm ON cm.id = f.cm
+              WHERE cm.id IS NULL AND f.status <> :deletefailed",
+            ['deletefailed' => 4]
+        );
+        foreach ($records as $record) {
+            plagiarism_uniwise_queue_delete($record);
+        }
+    }
+
+    /**
+     * Get the author of the content behind an assessable event.
+     *
+     * Forum posts and workshop submissions can be edited by other users (e.g. teachers),
+     * in which case the event user is the editor rather than the author.
+     *
+     * @param string $modname Module name.
+     * @param int $objectid The event object ID (forum post or workshop submission ID).
+     * @param int $fallback The user ID to use when no author is found.
+     * @return int
+     */
+    private static function get_author_id(string $modname, int $objectid, int $fallback): int {
+        global $DB;
+
+        $authorid = match ($modname) {
+            'forum' => $DB->get_field('forum_posts', 'userid', ['id' => $objectid]),
+            'workshop' => $DB->get_field('workshop_submissions', 'authorid', ['id' => $objectid]),
+            default => false,
+        };
+        return $authorid ? (int) $authorid : $fallback;
     }
 
     /**

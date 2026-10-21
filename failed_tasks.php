@@ -162,7 +162,7 @@ echo $OUTPUT->heading(get_string('failedsubmissions', 'plagiarism_uniwise'), 3);
 
 // Search form.
 $searchurl = new moodle_url($pageurl, ['dpage' => $dpage, 'dsearch' => $dsearch]);
-echo '<form method="get" action="' . $searchurl->out_omit_querystring() . '" class="mb-2">';
+echo html_writer::start_tag('form', ['method' => 'get', 'action' => $searchurl->out_omit_querystring(), 'class' => 'mb-2']);
 foreach ($searchurl->params() as $k => $v) {
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => $k, 'value' => $v]);
 }
@@ -183,7 +183,7 @@ if ($ssearch !== '') {
         ['class' => 'btn btn-link']
     );
 }
-echo '</form>';
+echo html_writer::end_tag('form');
 
 [$swhere, $sparams] = $buildwhere(3, $ssearch);
 $submitcount = $DB->count_records_select('plagiarism_uniwise_files', $swhere, $sparams);
@@ -315,7 +315,7 @@ echo $OUTPUT->heading(get_string('faileddeletions', 'plagiarism_uniwise'), 3);
 
 // Search form.
 $searchurl = new moodle_url($pageurl, ['spage' => $spage, 'ssearch' => $ssearch]);
-echo '<form method="get" action="' . $searchurl->out_omit_querystring() . '" class="mb-2">';
+echo html_writer::start_tag('form', ['method' => 'get', 'action' => $searchurl->out_omit_querystring(), 'class' => 'mb-2']);
 foreach ($searchurl->params() as $k => $v) {
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => $k, 'value' => $v]);
 }
@@ -336,7 +336,7 @@ if ($dsearch !== '') {
         ['class' => 'btn btn-link']
     );
 }
-echo '</form>';
+echo html_writer::end_tag('form');
 
 [$dwhere, $dparams] = $buildwhere(4, $dsearch);
 $deletecount = $DB->count_records_select('plagiarism_uniwise_files', $dwhere, $dparams);

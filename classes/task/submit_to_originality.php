@@ -65,7 +65,7 @@ class submit_to_originality extends \core\task\adhoc_task {
             $index = $this->should_index((int) $record->cm);
 
             if ($record->submissiontype === 'onlinetext') {
-                $response = $this->submit_onlinetext($DB, $client, $record, $index);
+                $response = $this->submit_onlinetext($client, $record, $index);
             } else {
                 $response = $this->submit_file_record($DB, $client, $record, $index);
             }
@@ -197,9 +197,8 @@ class submit_to_originality extends \core\task\adhoc_task {
     }
 
     /**
-     * Submit online text content to the external service.
+     * Submit online text content (assignment text, forum post, workshop submission or quiz essay).
      *
-     * @param \moodle_database $DB
      * @param \plagiarism_uniwise\api_client $client
      * @param object $record The plagiarism_uniwise_files record.
      * @param bool $index Whether the document should be indexed by the service.
@@ -207,7 +206,6 @@ class submit_to_originality extends \core\task\adhoc_task {
      * @throws \moodle_exception If the text content cannot be found or submitted.
      */
     private function submit_onlinetext(
-        \moodle_database $DB,
         \plagiarism_uniwise\api_client $client,
         object $record,
         bool $index = false
@@ -222,27 +220,8 @@ class submit_to_originality extends \core\task\adhoc_task {
             );
         }
 
-        // Retrieve the online text from the assignment submission.
-        $submission = $DB->get_record('assign_submission', [
-            'assignment' => $cm->instance,
-            'userid' => (int) $record->userid,
-        ], '*', IGNORE_MULTIPLE);
-
-        if (!$submission) {
-            throw new \moodle_exception(
-                'apierror',
-                'plagiarism_uniwise',
-                '',
-                "Submission not found for user {$record->userid} in assignment {$cm->instance}."
-            );
-        }
-
-        $onlinetext = $DB->get_record('assignsubmission_onlinetext', [
-            'assignment' => $cm->instance,
-            'submission' => $submission->id,
-        ]);
-
-        if (!$onlinetext || empty($onlinetext->onlinetext)) {
+        $text = \plagiarism_uniwise\onlinetext_finder::find($cm, (int) $record->userid, $record->identifier);
+        if ($text === null || $text === '') {
             throw new \moodle_exception(
                 'apierror',
                 'plagiarism_uniwise',
@@ -251,16 +230,6 @@ class submit_to_originality extends \core\task\adhoc_task {
             );
         }
 
-        // Verify the content matches (identifier is sha1 of content).
-        if (sha1($onlinetext->onlinetext) !== $record->identifier) {
-            throw new \moodle_exception(
-                'apierror',
-                'plagiarism_uniwise',
-                '',
-                "Online text content hash mismatch for record {$record->id}."
-            );
-        }
-
-        return $client->submit_text($onlinetext->onlinetext, (int) $record->cm, (int) $record->userid, $index);
+        return $client->submit_text($text, (int) $record->cm, (int) $record->userid, $index);
     }
 }
