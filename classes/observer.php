@@ -237,7 +237,7 @@ class observer {
 
             // The essay renderer links reports by the response summary, so that identifies the text.
             if (onlinetext_finder::essay_answer_text($qa) !== '') {
-                plagiarism_uniwise_submit_text((string) $qa->get_response_summary(), $cmid, $userid);
+                plagiarism_uniwise_submit_text((string) onlinetext_finder::essay_response_summary($qa), $cmid, $userid);
             }
 
             foreach ($qa->get_last_qt_files('attachments', $context->id) as $file) {

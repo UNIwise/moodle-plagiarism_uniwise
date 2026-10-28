@@ -106,13 +106,30 @@ class onlinetext_finder {
                 if ($qa->get_question()->get_type_name() !== 'essay') {
                     continue;
                 }
-                $summary = $qa->get_response_summary();
+                $summary = self::essay_response_summary($qa);
                 if ($summary !== null && sha1($summary) === $identifier) {
                     return self::essay_answer_text($qa);
                 }
             }
         }
         return null;
+    }
+
+    /**
+     * Get the response summary of an essay answer, as the essay renderer passes it to plagiarism_get_links().
+     *
+     * Since Moodle 5.0 the attempt_submitted event fires before the attempt is graded, so the summary is
+     * not stored yet; compute it from the last response the same way finishing the question does.
+     *
+     * @param \question_attempt $qa The essay question attempt.
+     * @return string|null
+     */
+    public static function essay_response_summary(\question_attempt $qa): ?string {
+        $summary = $qa->get_response_summary();
+        if ($summary !== null) {
+            return $summary;
+        }
+        return $qa->get_question()->summarise_response($qa->get_last_step()->get_qt_data());
     }
 
     /**
